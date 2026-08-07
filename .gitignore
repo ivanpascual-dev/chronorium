@@ -1,0 +1,35 @@
+# Dependencias
+node_modules/
+
+# Construcción
+dist/
+*.tsbuildinfo
+
+# Entorno y secretos · NUNCA a control de versiones
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+secrets.json
+.npmrc
+
+# Contexto de documentación del asistente (lleva credencial)
+.mcp.json
+
+# Salidas locales de pruebas
+tmp/
+*.local.json
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+*.log
+
+# ------------------------------------------------------------------
+# Nota para el repositorio de la INSTANCIA (el privado), no para este:
+# allí NO se ignoran archive/ ni state/. Son el estado del sistema y
+# tienen que commitearse, porque el repositorio es la base de datos
+# (docs/04-decisiones-adr.md, ADR-004). Ignorarlos allí deja al agente
+# sin memoria entre ejecuciones.
+# ------------------------------------------------------------------

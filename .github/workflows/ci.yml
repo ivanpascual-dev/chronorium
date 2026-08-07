@@ -1,0 +1,98 @@
+# Integracion continua. Se copia a .github/workflows/ci.yml al arrancar el repositorio.
+#
+# Las cuatro primeras comprobaciones son las de cualquier proyecto. Las tres ultimas son
+# especificas de este y existen porque el sistema anterior fallo exactamente ahi:
+#   - datos personales dentro de src/          (RF-A02)
+#   - la receta de ejemplo dejo de funcionar   (RF-H05)
+#   - la documentacion contradice al codigo    (RF-A09)
+#
+# Ninguna necesita credenciales: el modelo se simula y las fuentes salen de ficheros guardados.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Se lee de package.json -> engines.node. Un solo sitio para ese numero (RF-A10).
+          node-version-file: package.json
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Tipos
+        # Guarda de arranque: hasta que la Fase 1 aporte el primer .ts, no hay nada que comprobar.
+        # Desaparece sola en cuanto exista un fichero fuente.
+        run: |
+          if git ls-files 'src/**/*.ts' | grep -q .; then
+            pnpm exec tsc --noEmit
+          else
+            echo "Sin .ts todavia, se salta hasta que exista codigo fuente."
+          fi
+
+      - name: Linter y formato
+        run: pnpm run lint
+
+      - name: Tests
+        # Sin red y sin credenciales (regla R13). Si un test necesita red, el test esta mal.
+        run: pnpm test
+
+      - name: Construccion
+        # Misma guarda que Tipos: sin .ts no hay nada que compilar.
+        run: |
+          if git ls-files 'src/**/*.ts' | grep -q .; then
+            pnpm run build
+          else
+            echo "Sin .ts todavia, se salta hasta que exista codigo fuente."
+          fi
+
+      - name: Sin datos personales en src/
+        # RF-A02. Los correos se detectan solos. Los demas terminos (nombre real, proyectos
+        # anteriores, profesion...) NUNCA viven en el repositorio: son un secreto igual que una
+        # credencial (R3), se configuran en Settings > Secrets > Actions como PERSONAL_TERMS,
+        # separados por comas. Sin ese secreto definido, el check sigue corriendo con la deteccion
+        # de correos solamente.
+        env:
+          PERSONAL_TERMS: ${{ secrets.PERSONAL_TERMS }}
+        run: pnpm run check:sin-datos-personales
+
+      - name: La receta de ejemplo sigue viva
+        # RF-H05. Ejecuta el pipeline entero con modelo simulado y fuentes guardadas.
+        # Al vivir los datos reales en otro repositorio, esto es lo unico que demuestra que la
+        # herramienta funciona para alguien que no sea su autor.
+        # Guarda de arranque: se activa sola en cuanto el script exista en package.json.
+        run: |
+          if pnpm run | grep -q 'check:receta-ejemplo'; then
+            pnpm run check:receta-ejemplo
+          else
+            echo "check:receta-ejemplo no implementado todavia."
+          fi
+
+      - name: La documentacion no contradice al codigo
+        # RF-A09. Compara valores por defecto, variables de entorno y fuentes prometidas.
+        # Guarda de arranque: se activa sola en cuanto el script exista en package.json.
+        run: |
+          if pnpm run | grep -q 'check:docs'; then
+            pnpm run check:docs
+          else
+            echo "check:docs no implementado todavia."
+          fi

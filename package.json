@@ -1,0 +1,33 @@
+{
+  "name": "chronorium",
+  "version": "1.0.0",
+  "description": "Agente que produce informes periodicos con opinion propia, configurado por receta.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "node --test",
+    "check:sin-datos-personales": "tsx scripts/check-sin-datos-personales.ts"
+  },
+  "keywords": [],
+  "author": "ivanpascual988@gmail.com",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "packageManager": "pnpm@11.20.0",
+  "dependencies": {
+    "ai": "^7.0.55",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.7",
+    "@types/node": "^24.13.3",
+    "tsx": "^4.23.9",
+    "typescript": "^7.0.2"
+  }
+}

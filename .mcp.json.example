@@ -1,0 +1,17 @@
+{
+  "_comment": [
+    "Copia este fichero a .mcp.json y pon tu credencial real.",
+    ".mcp.json esta en .gitignore; este ejemplo no.",
+    "Sirve para consultar la documentacion actual de las librerias en vez de trabajar de memoria.",
+    "Usalo SIEMPRE antes de fijar un numero de version o un identificador de modelo."
+  ],
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "PON_AQUI_TU_CLAVE"
+      }
+    }
+  }
+}
