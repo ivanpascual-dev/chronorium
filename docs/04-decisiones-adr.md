@@ -202,7 +202,7 @@ función de validación propia. `generateObject` lo consume igual que si fuera e
 
 ## ADR-006 · Un SDK unificado de modelos en lugar de adaptadores propios
 
-**Estado:** aceptado
+**Estado:** aceptado · la elección de `generateObject` queda superseded por ADR-017
 
 **Contexto.** El sistema anterior tenía **tres implementaciones independientes** de la llamada a un
 modelo compatible con OpenAI, **tres** de la llamada a Gemini y **tres** del mapa de proveedor a
@@ -481,3 +481,32 @@ trata con las mismas capas de defensa que un asistente de cara al público (ver 
 **Consecuencia para el arnés de origen:** no existe un camino por defecto para "herramienta de línea
 de comandos de código abierto". Este proyecto lo estrena, y el aprendizaje vuelve al arnés cuando se
 entregue.
+
+---
+
+## ADR-017 · `generateText` con `Output.object`, no `generateObject`
+
+**Estado:** aceptado · supersede parcialmente a ADR-006
+
+**Contexto.** ADR-006 fijó `generateObject` para generación estructurada. Al construir la fase 1 se
+verificó el identificador y la forma de uso contra la documentación de ese día (ai-sdk.dev, agosto de
+2026), no de memoria, tal como exige la constitución antes de fijar nada de un proveedor externo. La
+comprobación mostró que `generateObject` y `streamObject` están **deprecados** desde la guía de
+migración de la v6 del SDK, con aviso explícito de que se eliminarán en una versión futura. La
+documentación de test oficial (`ai/test`, `MockLanguageModelV4`) ya solo cubre el patrón
+`generateText` con `output: Output.object({ schema })`. El paquete instalado es `ai@7.0.55`: la
+función deprecada sigue funcionando hoy, no es un bloqueo, pero fase 1 nacería apoyada en algo
+marcado para desaparecer.
+
+**Decisión.** `src/model/client.ts` usa `generateText` con `output: Output.object({ schema })`, no
+`generateObject`.
+
+**Por qué.** La documentación vigente y las utilidades de test oficiales ya asumen el patrón nuevo.
+Adoptar la función deprecada el primer día es deuda conocida de entrada, evitable sin coste: la
+envoltura del esquema con `jsonSchema()` (ADR-005) no cambia, solo cambia la función que la consume.
+
+**Consecuencias.**
+
+- El resultado se lee en `result.output`, no en `result.object`.
+- El doble de proveedor para tests (RF-H03) se construye con `MockLanguageModelV4` de `ai/test`.
+- Si una versión futura del SDK elimina `generateObject`, este proyecto no se ve afectado.
