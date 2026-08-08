@@ -1,0 +1,38 @@
+sections:
+  - key: pulse
+    title: 'Pulso del día'
+    cardinality: one
+    condition: always
+    fields:
+      - {
+          name: text,
+          type: string,
+          description: 'Dos o tres frases que resumen el día: qué es ruido y qué es movimiento real.',
+        }
+
+  - key: top
+    title: 'Lo más relevante'
+    cardinality: list
+    min: 2
+    max: 5
+    condition: always
+    fields:
+      - { name: title, type: string }
+      - { name: verdict, type: string, description: 'Tu opinión sobre por qué importa o no importa.' }
+      - { name: why, type: string, description: 'El razonamiento detrás del veredicto.' }
+      - { name: link, type: url }
+
+  - key: applicable
+    title: 'Aplícate esto'
+    cardinality: list
+    min: 0
+    max: 3
+    condition: non-empty
+    fields:
+      - { name: title, type: string }
+      - {
+          name: action,
+          type: string,
+          description: 'Qué hacer esta semana con tus manos, no estrategia de empresa.',
+        }
+      - { name: link, type: url }

@@ -1,0 +1,7 @@
+language: es
+topics:
+  - modelos de lenguaje y agentes de IA
+  - herramientas y frameworks para desarrolladores
+model:
+  provider: google
+  id: gemini-3.6-flash

@@ -34,13 +34,13 @@ detectarlo en la fase 6 cuesta el proyecto.
 > **Pregunta:** ¿produce un modelo contenido de calidad para secciones que solo conoce por un fichero
 > de configuración?
 
-- [ ] Tests de la construcción del esquema: `sections.yaml` válido, con campos que faltan, con
+- [x] Tests de la construcción del esquema: `sections.yaml` válido, con campos que faltan, con
       cardinalidad inválida, con tipos desconocidos
-- [ ] Implementar la carga y validación de recetas
-- [ ] Implementar la derivación del esquema y su envoltura para generación estructurada
-- [ ] Escribir **dos recetas de forma distinta** (secciones, cardinalidades y persona distintas)
-- [ ] Ejecutar las dos contra un modelo real con un puñado de elementos fijos
-- [ ] **Juicio del dueño sobre la calidad del texto de cada sección.** No es un test automático: es
+- [x] Implementar la carga y validación de recetas
+- [x] Implementar la derivación del esquema y su envoltura para generación estructurada
+- [x] Escribir **dos recetas de forma distinta** (secciones, cardinalidades y persona distintas)
+- [x] Ejecutar las dos contra un modelo real con un puñado de elementos fijos
+- [x] **Juicio del dueño sobre la calidad del texto de cada sección.** No es un test automático: es
       leerlo y decir si sirve
 
 **Puerta de salida.** Si la calidad se cae con secciones genéricas, se aplica el plan de contingencia

@@ -1,0 +1,107 @@
+[
+  {
+    "title": "Phase 2 trial of an oral GLP-1/glucagon dual agonist meets primary endpoint",
+    "url": "https://clinicaltrials.example.test/trial/NCT-20260801",
+    "source": "ClinicalTrials registry (mock)",
+    "publishedAt": "2026-08-05",
+    "summary": "A 26-week randomized trial in 412 participants reports a statistically significant reduction in body weight versus placebo, with the most common adverse events being mild gastrointestinal symptoms. No cardiovascular safety signal reported at this interim analysis."
+  },
+  {
+    "title": "CRISPR base editing corrects a disease variant in liver organoids",
+    "url": "https://journal.example.test/articles/base-editing-organoids",
+    "source": "Journal of Molecular Therapy (mock)",
+    "publishedAt": "2026-08-04",
+    "summary": "Researchers report correction of a single point mutation in patient-derived liver organoids using an improved base editor with reduced off-target activity, measured by whole-genome sequencing across edited lines."
+  },
+  {
+    "title": "Long-read sequencing reveals structural variants missed by short-read panels",
+    "url": "https://journal.example.test/articles/long-read-structural-variants",
+    "source": "Genome Biology (mock)",
+    "publishedAt": "2026-08-03",
+    "summary": "Comparing long-read and short-read sequencing on the same 200 clinical samples, the authors find structural variants in 8% of cases that standard short-read panels missed entirely, several of them clinically actionable."
+  },
+  {
+    "title": "A large registry study questions the mortality benefit of an approved sepsis biomarker test",
+    "url": "https://journal.example.test/articles/sepsis-biomarker-registry",
+    "source": "Critical Care Medicine (mock)",
+    "publishedAt": "2026-08-02",
+    "summary": "Retrospective analysis of 30,000 ICU admissions finds no significant mortality difference between hospitals that adopted the biomarker-guided protocol and those that didn't, despite earlier single-center trials showing benefit."
+  },
+  {
+    "title": "Single-cell atlas of tumor-infiltrating lymphocytes across five cancer types",
+    "url": "https://journal.example.test/articles/til-atlas-five-cancers",
+    "source": "Cell Reports (mock)",
+    "publishedAt": "2026-08-01",
+    "summary": "A cross-cancer single-cell RNA sequencing atlas identifies a shared exhausted-T-cell state associated with poor response to checkpoint inhibitors, independent of tumor type."
+  },
+  {
+    "title": "Phase 3 trial of an antisense oligonucleotide for a rare neuromuscular disease halted early for efficacy",
+    "url": "https://clinicaltrials.example.test/trial/NCT-20260731",
+    "source": "ClinicalTrials registry (mock)",
+    "publishedAt": "2026-07-31",
+    "summary": "An independent data monitoring committee recommended stopping the trial early after a planned interim analysis showed a clear functional benefit over placebo, on the basis of a validated motor function scale."
+  },
+  {
+    "title": "Reproducibility check finds a widely cited gut microbiome-longevity link does not replicate",
+    "url": "https://journal.example.test/articles/microbiome-longevity-replication",
+    "source": "PLOS Biology (mock)",
+    "publishedAt": "2026-07-30",
+    "summary": "An independent group attempted to replicate a 2024 finding linking a specific gut bacterial ratio to lifespan in mice, using a larger cohort and blinded analysis, and found no significant association."
+  },
+  {
+    "title": "AI-assisted protein structure prediction extends to membrane protein complexes",
+    "url": "https://journal.example.test/articles/membrane-complex-prediction",
+    "source": "Nature Structural Biology (mock)",
+    "publishedAt": "2026-07-29",
+    "summary": "An updated structure-prediction model reports substantially improved accuracy on multi-chain membrane protein complexes, a class that previous generations of the tool handled poorly, validated against a held-out set of recently solved cryo-EM structures."
+  },
+  {
+    "title": "A meta-analysis finds inconsistent effect sizes across omega-3 supplementation trials for cognitive decline",
+    "url": "https://journal.example.test/articles/omega-3-cognition-meta-analysis",
+    "source": "JAMA Neurology (mock)",
+    "publishedAt": "2026-07-28",
+    "summary": "Pooling 18 randomized trials, the authors find high heterogeneity in effect size and no significant pooled benefit on standardized cognitive tests, with the largest positive trials being the ones with the shortest follow-up."
+  },
+  {
+    "title": "A new open lab protocol standardizes organoid differentiation timing across sites",
+    "url": "https://protocols.example.test/organoid-differentiation-standard",
+    "source": "Protocols.io (mock)",
+    "publishedAt": "2026-07-27",
+    "summary": "A multi-site consortium publishes a shared step-by-step protocol after finding that differentiation timing varied by up to nine days between labs using nominally the same published method, a known source of irreproducibility."
+  },
+  {
+    "title": "Wastewater surveillance detects a novel influenza reassortant before clinical case reports",
+    "url": "https://journal.example.test/articles/wastewater-influenza-reassortant",
+    "source": "Emerging Infectious Diseases (mock)",
+    "publishedAt": "2026-07-26",
+    "summary": "Genomic surveillance of municipal wastewater identified a novel reassortant strain roughly three weeks before the first confirmed clinical cases in the same region, illustrating an early-warning use case beyond COVID-era wastewater programs."
+  },
+  {
+    "title": "A phase 1 trial of an mRNA-based personalized cancer vaccine reports manageable toxicity",
+    "url": "https://clinicaltrials.example.test/trial/NCT-20260725",
+    "source": "ClinicalTrials registry (mock)",
+    "publishedAt": "2026-07-25",
+    "summary": "First-in-human dose-escalation study in 24 patients with resected pancreatic cancer reports grade 1-2 injection-site and flu-like reactions as the main toxicities, with immunogenicity data showing neoantigen-specific T-cell responses in most participants."
+  },
+  {
+    "title": "A commentary argues that preprint-only clinical claims are increasingly cited in patient-facing content without caveats",
+    "url": "https://journal.example.test/articles/preprint-patient-facing-commentary",
+    "source": "The Lancet (mock)",
+    "publishedAt": "2026-07-24",
+    "summary": "The authors document cases where preprint findings, later substantially revised or retracted in peer review, were already circulating in patient advocacy material without any indication of their unreviewed status."
+  },
+  {
+    "title": "Lab automation platform reports a 3x throughput increase for CRISPR screening",
+    "url": "https://vendor.example.test/press/automation-throughput",
+    "source": "Vendor press release (mock)",
+    "publishedAt": "2026-07-23",
+    "summary": "A liquid-handling and imaging platform vendor claims a threefold throughput increase for genome-wide CRISPR knockout screens; figures come from the vendor's own benchmarking rather than an independent peer-reviewed comparison."
+  },
+  {
+    "title": "A large biobank study links a common variant to variable statin response",
+    "url": "https://journal.example.test/articles/biobank-statin-response-variant",
+    "source": "Circulation: Genomic and Precision Medicine (mock)",
+    "publishedAt": "2026-07-22",
+    "summary": "Analysis of 180,000 biobank participants finds carriers of a common variant show a significantly smaller LDL reduction on standard statin doses, with the effect replicated in a second independent cohort."
+  }
+]

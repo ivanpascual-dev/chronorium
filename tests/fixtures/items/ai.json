@@ -1,0 +1,107 @@
+[
+  {
+    "title": "Gemini 3.6 Flash reaches general availability",
+    "url": "https://ai.google.dev/gemini-api/docs/whats-new-gemini-3.6",
+    "source": "Google AI for Developers",
+    "publishedAt": "2026-08-05",
+    "summary": "Google moved Gemini 3.6 Flash out of preview: lower token usage on agentic and multimodal tasks than 3.5 Flash, at a lower price point. Positioned as the default for high-throughput production workloads."
+  },
+  {
+    "title": "Vercel AI SDK deprecates generateObject in favor of Output.object",
+    "url": "https://ai-sdk.dev/docs/migration-guides/migration-guide-6-0",
+    "source": "Vercel AI SDK docs",
+    "publishedAt": "2026-08-04",
+    "summary": "generateObject and streamObject are marked deprecated as of the v6 migration guide. The recommended path is generateText/streamText with an output: Output.object({schema}) setting, which the SDK's own testing utilities now assume."
+  },
+  {
+    "title": "Anthropic ships prompt caching improvements for long agent sessions",
+    "url": "https://www.anthropic.com/news/prompt-caching",
+    "source": "Anthropic",
+    "publishedAt": "2026-08-03",
+    "summary": "Extended cache TTL and better cache-hit reporting for multi-turn agent sessions, aimed at reducing cost for tools that keep long conversation context alive across many tool calls."
+  },
+  {
+    "title": "biome 2.6 adds a stricter noFloatingPromises rule",
+    "url": "https://biomejs.dev/blog/biome-v2-6/",
+    "source": "Biome",
+    "publishedAt": "2026-08-02",
+    "summary": "The new lint rule flags unhandled promises by default in the recommended preset, catching a common source of silent failures in async CLI tools and workers."
+  },
+  {
+    "title": "Node.js 24 type-stripping stabilizes rewriteRelativeImportExtensions in TypeScript 7",
+    "url": "https://devblogs.microsoft.com/typescript/",
+    "source": "TypeScript blog",
+    "publishedAt": "2026-08-01",
+    "summary": "TypeScript's newest release lets projects import local files with a literal .ts extension and have the compiler rewrite it to .js on emit, closing a long-standing gap for tools that run TypeScript natively via Node's built-in stripping."
+  },
+  {
+    "title": "OpenAI opens a new context-caching tier for the Assistants API",
+    "url": "https://platform.openai.com/docs/changelog",
+    "source": "OpenAI",
+    "publishedAt": "2026-07-31",
+    "summary": "A cheaper caching tier for repeated system prompts, aimed at agent frameworks that resend the same tool definitions and instructions on every call."
+  },
+  {
+    "title": "pnpm 11.20 ships supply-chain policy checks on install",
+    "url": "https://pnpm.io/blog",
+    "source": "pnpm",
+    "publishedAt": "2026-07-30",
+    "summary": "pnpm can now verify a lockfile against a configurable supply-chain policy before every install, flagging packages that changed maintainers or publish cadence suspiciously, a direct response to the keyv npm compromise from earlier this month."
+  },
+  {
+    "title": "Cloudflare Workers raises the free-tier CPU budget for scheduled tasks",
+    "url": "https://blog.cloudflare.com/workers-cron-triggers-update/",
+    "source": "Cloudflare",
+    "publishedAt": "2026-07-29",
+    "summary": "The free plan's per-invocation CPU budget for Cron Triggers increases, though it remains far below what a full RSS-parsing job typically needs without moving to a paid tier."
+  },
+  {
+    "title": "GitHub Actions adds native concurrency groups to reusable workflows",
+    "url": "https://github.blog/changelog/",
+    "source": "GitHub Changelog",
+    "publishedAt": "2026-07-28",
+    "summary": "Reusable workflows can now declare their own concurrency group independent of the caller, useful for anything that writes state back to the repository and can't tolerate overlapping runs."
+  },
+  {
+    "title": "Zod 4.5 adds first-class JSON Schema export",
+    "url": "https://zod.dev/changelog",
+    "source": "Zod",
+    "publishedAt": "2026-07-27",
+    "summary": "Zod schemas can now export a JSON Schema representation directly, narrowing the gap with tools that build dynamic schemas by hand and then wrap them for structured generation."
+  },
+  {
+    "title": "A survey of 40 small AI agent projects finds most hardcode their target domain",
+    "url": "https://example-devblog.test/agent-survey-2026",
+    "source": "Independent devblog",
+    "publishedAt": "2026-07-26",
+    "summary": "Looking at open-source personal-briefing and research-agent projects, the author finds that almost all of them bake the recipient, the topics, and the output sections directly into source code, making them unusable for anyone outside the original author's domain."
+  },
+  {
+    "title": "Bun 1.3 improves Node compatibility for the built-in test runner",
+    "url": "https://bun.sh/blog/bun-v1.3",
+    "source": "Bun",
+    "publishedAt": "2026-07-25",
+    "summary": "Closer parity with node:test's assertion and lifecycle APIs, making it easier for projects that standardized on the native runner to also run under Bun without a separate test harness."
+  },
+  {
+    "title": "A retrospective on why cron-based personal agents miss days silently",
+    "url": "https://example-devblog.test/silent-cron-failures",
+    "source": "Independent devblog",
+    "publishedAt": "2026-07-24",
+    "summary": "Common failure pattern documented across several hobby projects: a single point of failure in the model provider chain, combined with retrying on any exception instead of only recoverable errors, burns through the retry budget against permanent failures like bad credentials."
+  },
+  {
+    "title": "React Router 8 finalizes its data-loading API",
+    "url": "https://reactrouter.com/changelog",
+    "source": "React Router",
+    "publishedAt": "2026-07-23",
+    "summary": "Loader and action APIs reach their final shape after a year in RC, with a migration codemod for the most common v7 patterns."
+  },
+  {
+    "title": "A new benchmark measures structured-output reliability on developer-defined JSON Schemas",
+    "url": "https://example-benchmarks.test/dynamic-schema-eval",
+    "source": "Independent benchmark",
+    "publishedAt": "2026-07-22",
+    "summary": "Tests several current-generation models against schemas the model has never seen documentation for, finding that quality holds up well for short field descriptions but degrades when a schema has more than six sections with no per-section guidance."
+  }
+]

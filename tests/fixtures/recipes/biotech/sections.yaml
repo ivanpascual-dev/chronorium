@@ -1,0 +1,22 @@
+sections:
+  - key: digest
+    title: 'Research digest'
+    cardinality: list
+    min: 3
+    max: 6
+    condition: always
+    fields:
+      - { name: finding, type: string, description: 'What was found or shown.' }
+      - { name: method, type: string, description: 'How it was studied, briefly.' }
+      - { name: relevance, type: string, description: "Your take on why it matters, or why it doesn't." }
+      - { name: source, type: url }
+
+  - key: watchout
+    title: 'Watch out for this'
+    cardinality: list
+    min: 0
+    max: 3
+    condition: non-empty
+    fields:
+      - { name: claim, type: string, description: 'A claim being made in the field right now.' }
+      - { name: caveat, type: string, description: 'What is missing or overstated about it.' }

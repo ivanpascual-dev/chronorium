@@ -1,0 +1,7 @@
+language: en
+topics:
+  - clinical trial results
+  - laboratory methods and techniques
+model:
+  provider: google
+  id: gemini-3.6-flash
