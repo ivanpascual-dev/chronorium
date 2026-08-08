@@ -32,12 +32,56 @@ export interface ModelConfig {
   readonly id: string;
 }
 
+/**
+ * Bolsa de campos deliberadamente abierta: cada lector (`src/sources/*.ts`) lee solo los campos
+ * que su tipo declara y `validate.ts` comprueba que estén presentes, nombrando el campo si falta
+ * (RF-A05). Un tipo unión discriminada obligaría a los cinco lectores a conocerse entre sí.
+ */
+export interface SourceSpec {
+  readonly id: string;
+  readonly type: string;
+  /** `feed`, `json-api`. */
+  readonly url?: string;
+  /** `json-api`: dónde está cada campo de `Item` en la respuesta, declarado, nunca adivinado. */
+  readonly mapping?: {
+    readonly items?: string;
+    readonly title: string;
+    readonly url: string;
+    readonly publishedAt?: string;
+    readonly summary?: string;
+  };
+  /** `repo-search`: cualificadores de la búsqueda, sin `created:` ni `sort` (los añade el lector). */
+  readonly query?: string;
+  /** `repo-releases`: repositorios `owner/repo` cuyos lanzamientos se leen. */
+  readonly repos?: readonly string[];
+  /** `archive`: qué receta destilar. Ausente ⇒ todas las que haya en `dataRoot/archive`. */
+  readonly recipe?: string;
+}
+
+export interface WindowConfig {
+  readonly days: number;
+}
+
+export interface ScoringConfig {
+  readonly recencyWeight: number;
+  readonly topicsWeight: number;
+}
+
+export interface CapsConfig {
+  readonly maxItems: number;
+  readonly perSourceMaxPercent: number;
+}
+
 export interface RecipeConfig {
   readonly language: string;
   readonly topics: readonly string[];
   readonly persona: Persona;
   readonly model: ModelConfig;
   readonly sections: readonly SectionSpec[];
+  readonly sources: readonly SourceSpec[];
+  readonly window: WindowConfig;
+  readonly scoring: ScoringConfig;
+  readonly caps: CapsConfig;
 }
 
 export interface ValidationIssue {

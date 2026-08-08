@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "recipe": "daily",
+  "date": "2026-08-05",
+  "generatedAt": "2026-08-05T08:00:31.412Z",
+  "sections": [
+    {
+      "key": "pulse",
+      "title": "Pulso del día",
+      "items": [{ "text": "Resumen del día, sin enlace propio: no debe convertirse en elemento." }]
+    },
+    {
+      "key": "releases",
+      "title": "Novedades de tu stack",
+      "items": [
+        {
+          "title": "herramienta-nueva publica la v2.4.0",
+          "change": "Añade configuración declarativa.",
+          "impact": "Corrige tres fugas de memoria reportadas.",
+          "link": "https://github.com/ejemplo-org/herramienta-nueva/releases/tag/v2.4.0"
+        },
+        {
+          "title": "proyecto-joven adopta un nuevo formato de datos",
+          "change": "Migra su configuración al formato 1.0.",
+          "impact": "Sin cambios de comportamiento para quien ya lo usaba.",
+          "link": "https://github.com/otra-org/proyecto-joven/releases/tag/v1.0.0"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "provider": "gemini",
+    "providerWasFallback": false,
+    "itemsCollected": 40,
+    "itemsAnalyzed": 35,
+    "sourcesOk": 9,
+    "sourcesFailed": 0,
+    "linksDropped": 0,
+    "health": { "windowDays": 30, "runsOk": 28, "runsFailed": 2 }
+  }
+}

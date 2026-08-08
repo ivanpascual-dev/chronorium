@@ -1,12 +1,7 @@
 import type { RecipeConfig } from '../recipe/types.ts';
+import type { Item } from '../sources/types.ts';
 
-export interface Item {
-  readonly title: string;
-  readonly url: string;
-  readonly source: string;
-  readonly publishedAt: string;
-  readonly summary: string;
-}
+export type { Item };
 
 function renderIdentity(recipe: RecipeConfig): string {
   return `# Identidad y destinatario\n\n${recipe.persona.text.trim()}`;
@@ -26,7 +21,7 @@ function renderItem(item: Item): string {
     `- title: ${item.title}`,
     `  url: ${item.url}`,
     `  source: ${item.source}`,
-    `  publishedAt: ${item.publishedAt}`,
+    `  publishedAt: ${item.publishedAt ?? 'desconocida'}`,
     `  summary: ${item.summary}`,
   ].join('\n');
 }

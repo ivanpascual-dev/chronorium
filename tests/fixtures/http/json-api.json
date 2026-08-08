@@ -1,0 +1,21 @@
+{
+  "results": [
+    {
+      "headline": "Se publica la especificación final de un formato de datos",
+      "permalink": "https://example-devblog.test/noticias/formato-final",
+      "published_at": "2026-08-05T09:00:00Z",
+      "body": "Tras un año de borradores, el grupo de trabajo cierra la versión 1.0 del formato."
+    },
+    {
+      "headline": "Una herramienta de línea de comandos añade soporte para configuración declarativa",
+      "permalink": "https://example-devblog.test/noticias/cli-declarativa",
+      "published_at": "2026-08-04T09:00:00Z",
+      "body": "La nueva versión permite describir el comportamiento en un fichero en vez de con banderas."
+    },
+    {
+      "headline": "Entrada sin fecha de publicación en el campo esperado",
+      "permalink": "https://example-devblog.test/noticias/sin-fecha",
+      "body": "Esta entrada no trae published_at, para probar el mapeo con un campo ausente."
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+[
+  {
+    "tag_name": "v2.4.0",
+    "name": "v2.4.0",
+    "html_url": "https://github.com/ejemplo-org/herramienta-nueva/releases/tag/v2.4.0",
+    "body": "Añade soporte para configuración declarativa y corrige tres fugas de memoria.",
+    "published_at": "2026-08-05T12:00:00Z",
+    "draft": false,
+    "prerelease": false
+  },
+  {
+    "tag_name": "v2.3.0",
+    "name": "v2.3.0",
+    "html_url": "https://github.com/ejemplo-org/herramienta-nueva/releases/tag/v2.3.0",
+    "body": "Lanzamiento anterior, fuera de la ventana en la mayoría de los tests.",
+    "published_at": "2026-06-01T12:00:00Z",
+    "draft": false,
+    "prerelease": false
+  },
+  {
+    "tag_name": "v2.5.0-rc1",
+    "name": "v2.5.0-rc1",
+    "html_url": "https://github.com/ejemplo-org/herramienta-nueva/releases/tag/v2.5.0-rc1",
+    "body": "Candidato a lanzamiento, no debería colarse como novedad estable.",
+    "published_at": "2026-08-06T09:00:00Z",
+    "draft": false,
+    "prerelease": true
+  }
+]

@@ -61,6 +61,133 @@ hacer: el código dice cómo quedó, pero no qué se intentó antes ni qué se d
 
 ## Entradas
 
+## 2026-08-08 · Fase 2 · Construido T0-T16, veredicto del dueño (T17): sirve
+
+**Hecho.** Los cinco lectores de fábrica (`feed`, `json-api`, `repo-search`, `repo-releases`,
+`archive`) tras `src/sources/registry.ts`, elegidos solo por `type` declarado, con su test nominal
+(una fuente `feed` con `reddit.com` en la URL se lee con el lector `feed`). `src/sources/collect.ts`
+aísla el fallo por fuente (RF-B05): 500, tiempo de espera agotado, tipo desconocido o XML roto se
+registran y las demás continúan. El pipeline de `rank/` (`window.ts`, `score.ts`, `dedupe.ts`,
+`caps.ts`, `pipeline.ts`) implementa el orden fijado por el plan
+(interpretar fechas → deduplicar → filtrar ventana → filtrar memoria → puntuar → tope por fuente →
+tope global) con tests que distinguen ese orden de los órdenes incorrectos, no solo que el
+resultado final "se parezca". `src/state/seen.ts` guarda huella (SHA-256 de la URL y del título
+normalizados, nunca el texto), poda por ventana, y no reescribe `firstSeen`, con escritura atómica
+(temporal + renombrado). `recipe/validate.ts` se extiende a `sources`, `window`, `scoring` y `caps`
+con la misma forma de error de la fase 1 (`campo` + `motivo`), sin abortar en el primero.
+`recipes/example/recipe.yaml` gana cuatro fuentes públicas reales (`hnrss.org`, la API de dev.to,
+búsqueda y lanzamientos de GitHub), sin más credencial que la del modelo (RF-B04); la receta
+biotech de test gana fuentes de forma deliberadamente distinta (`archive` en vez de
+`repo-search`/`repo-releases`, que no tienen sentido en ese dominio). 133 tests en verde, sin red y
+sin credenciales. `pnpm run check:receta-ejemplo` ahora ejercita también la recolección, con
+`fetch` servido desde fixtures. `pnpm run probe:fase2` ejecutado de verdad en esta sesión: las
+cuatro fuentes de `recipes/example` respondieron (65 elementos crudos, 60 tras el pipeline), sin
+ninguna credencial. La mitad de síntesis no se ejecutó al principio: `GOOGLE_GENERATIVE_AI_API_KEY`
+seguía sin definir en esa parte de la sesión, y **no se simuló nada** en su lugar, tal como manda
+el plan.
+
+**T17.** El dueño exportó la credencial en su propia sesión de shell (no en un fichero: R3 lo
+prohíbe, y se le explicó por qué antes de que lo pidiera) y volvió a correr `probe:fase2` completo.
+La síntesis real produjo un informe (`tmp/probe-fase2.json`, no versionado) con opinión propia,
+tuteo, "Aplícate esto" con acciones concretas en vez de genéricas (actualizar Biome a la 2.5.7,
+probar RuleSync), y un "Pulso del día" que distingue ruido de movimiento real, tal como pide
+`persona.md`. Comparado con el veredicto de la fase 1 ("el contenido sale escueto, el techo de
+detalle es el techo del fixture"), este informe es visiblemente más profundo: los `verdict` y `why`
+de "Lo más relevante" razonan sobre el contenido real de los artículos, no sobre una fixture de dos
+frases escritas a mano. **Responde que sí a la pregunta que la fase 1 dejó abierta**, con la
+salvedad ya anotada en deuda: los enlaces del informe no están todavía garantizados por código
+(RF-E03 es fase 3), así que esta lectura es sobre calidad de contenido, no sobre seguridad de
+enlaces.
+
+**Se desvió.**
+
+- **`fast-xml-parser` → `@rgrove/parse-xml`.** El plan nombraba `fast-xml-parser` para T13, pero el
+  propio plan exige `@dependency-audit` antes de instalar. La auditoría encontró un patrón de CVEs
+  concentrado justo en el código de expansión de entidades XML (una cadena de tres arreglos
+  incompletos sobre el mismo bug, el último de hace dos semanas) y que la librería pasó a arrastrar
+  siete subdependencias de un único mantenedor. Se cambió a `@rgrove/parse-xml`: cero dependencias,
+  cero CVEs conocidos, e inmune por diseño a esa clase de ataque porque no resuelve entidades de
+  DTD externas. Mismo patrón que ADR-017 en la fase 1: el plan fija la mejor decisión con la
+  información de su momento, y el propio mecanismo de verificación que la constitución exige puede
+  cambiarla.
+- **`ReadContext` gana `windowDays`.** El bloque de tipos literal de T1 no lo incluía, pero RF-B09
+  (T0, el requisito que el propio plan añadió) exige que `repo-search` acote su consulta a la
+  ventana de la receta, y no había ningún otro conducto para llevarle ese número al lector. Se
+  añadió con su motivo en el propio tipo. Es una extensión del contrato, no una ruptura: los cinco
+  campos que ya existían no cambiaron.
+- **`src/sources/http.ts` y `makeItem` (en `src/sources/types.ts`) no aparecen en la lista literal
+  de "Ficheros que se tocan" del plan.** `http.ts` extrae `fetchWithTimeout` (identificador de
+  cliente propio + tiempo de espera, RF-B08) como la única implementación compartida por los cuatro
+  lectores que hacen red, en vez de repetirla cuatro veces (R10). `makeItem` es el único punto que
+  construye un `Item` omitiendo `publishedAt` en vez de dejarlo en `undefined`, necesario porque
+  `exactOptionalPropertyTypes` (activo desde la fase 1) rechaza asignar `undefined` explícito a un
+  campo opcional; sin él, los cinco lectores habrían repetido la misma condición. Señalado por
+  `@fiel-al-plan` al cerrar la fase como "de más, con disclosure floja" (estaba mencionado en esta
+  bitácora bajo "Costó más de lo previsto", no bajo este epígrafe): se deja constancia aquí,
+  explícitamente, de que es código nuevo no listado en el plan, justificado por R10.
+- **El test de "peso ausente en la receta" (T5) vive en `tests/recipe/validate.test.ts`, no en
+  `tests/rank/score.test.ts`.** Es una validación de la receta (`ScoringConfig` completo es una
+  garantía de tipos por el momento en que llega a `score.ts`), no de la lógica de puntuación en sí.
+  Ponerlo en `score.test.ts` habría probado indirectamente `validate.ts` desde el sitio equivocado.
+- **La regla "ante duplicado se conserva el de mayor puntuación" (T7) se prueba con puntuaciones
+  sintéticas inyectadas en el test.** El orden real del pipeline (T9) deduplica *antes* de puntuar,
+  así que en producción los empates de deduplicación siempre se resuelven por "primero visto", no
+  por puntuación real. `dedupeItems` acepta un campo `score` opcional para que la lógica de
+  desempate sea genérica y comprobable en aislamiento, documentado en el código para que no se lea
+  como contradicción con el orden del pipeline.
+
+**Costó más de lo previsto.**
+
+- `exactOptionalPropertyTypes` (ya activo desde la fase 1) contra `publishedAt?: string` en cinco
+  lectores distintos: cada uno construía objetos donde `publishedAt` podía ser `string | undefined`
+  y el compilador rechaza asignar `undefined` explícito a un campo opcional. Se resolvió con un
+  único factory (`makeItem` en `src/sources/types.ts`, R10) que omite la clave en vez de dejarla en
+  `undefined`, consumido por los cinco lectores y por `rank/pipeline.ts`.
+- Diseñar `SourceSpec` como una bolsa de campos opcionales en vez de una unión discriminada por
+  `type`. Una unión habría exigido que cada lector conociera la forma completa de los otros cuatro
+  tipos para poder importar el tipo unión; la bolsa abierta deja que cada lector lea solo sus
+  propios campos, y `validate.ts` es el único sitio que sabe qué campos exige cada `type`.
+
+**Deuda.**
+
+- **RF-B03 (fuente que exige credencial ausente) no lo ejercita ninguna fuente de fábrica.** Las
+  cinco declaran `requiredSecrets: []` a propósito (RF-B04). El mecanismo está probado con un
+  lector inyectado en el test de `validate.ts`, pero nunca se ha visto rechazar una receta real.
+  Se desbloquea el día que entre un tipo de fuente que sí exija credencial (ver ADR-012 y la nueva
+  entrada de `06-extensibilidad.md` sobre el radar de repositorios, que apunta en esa dirección si
+  algún día exige `GITHUB_TOKEN`).
+- **El "crecimiento medido de verdad" del radar de repositorios queda fuera, con su disparador
+  escrito en `docs/06-extensibilidad.md` y enlazado desde `docs/ops.md`** (T0 lo pedía explícito).
+- **La validación de enlaces contra el conjunto de entrada (RF-E03) sigue sin existir.** Es fase 3
+  a propósito, pero conviene decirlo aquí porque `T17` juzgó un informe cuyos enlaces **no** están
+  garantizados por código todavía, solo por lo que el modelo hizo bien esta vez.
+
+**Cierre: `@fiel-al-plan` y `/verifier` (con `@guardarrailes`).** Los tres en verde tras el T17 del
+dueño. `@fiel-al-plan`: veredicto fiel, doce trampas respetadas, seis contratos intactos.
+`@guardarrailes`: los casos 1, 2, 3 y 4 de la batería de ataques resisten de verdad (probado
+extremo a extremo con los lectores reales y `composePrompt`, no solo con `Item` escritos a mano); el
+caso 8 (fuente desbordada) resiste en el camino real, no solo en el test aislado; los casos 5, 6, 7,
+9 y 10 se marcan "no aplica" con razón, porque sus mecanismos (validación de enlaces, cadena de
+proveedores) no existen todavía, y es fase 3 quien los construye. Tres hallazgos menores de ambos
+agentes se corrigieron en el propio cierre, no se dejaron como deuda: faltaban dos de los cuatro
+ficheros de ataque que el plan decía que T2 dejaría guardados (`inyeccion-en-cuerpo.xml`,
+`fuga-de-prompt.xml`, para los casos 2 y 3, con sus tests de extremo a extremo contra
+`composePrompt`); faltaba un test explícito para HTTP 429, nombrado aparte de 500 en T2/T14 aunque
+el mecanismo genérico (`!response.ok`) ya lo cubría; y `GITHUB_TOKEN` no estaba en la tabla de
+secretos de `docs/05-seguridad-legal.md`, a pesar de ser un secreto real que el código lee (opcional,
+pero real). Ninguno cambiaba el veredicto, los tres eran baratos de cerrar antes de que se
+convirtieran en deuda que alguien tuviera que redescubrir.
+
+**Aprendido.** Un doble de prueba puede ser tan peligroso como el código que prueba: un lector
+falso que "nunca resuelve" para simular una fuente colgada, si no respeta ningún tiempo de espera
+él mismo, cuelga el test para siempre en vez de probar que `collect.ts` aísla el fallo. Se detectó
+antes de ejecutarlo (el doble ignoraba `ctx.timeoutMs`) y se corrigió para que expirara de verdad,
+como hacen los lectores reales vía `fetchWithTimeout`. Y una fecha fija importa tanto en el código
+de producción como en los scripts de CI: `check-receta-ejemplo.ts` estuvo a punto de usar
+`new Date()` contra fixtures con fechas fijas de 2026, lo que habría hecho que el chequeo se
+degradara solo con el paso del tiempo real, exactamente el tipo de fallo silencioso que esta fase
+existe para prevenir en el propio motor.
+
 ## 2026-08-08 · Fase 1 · Construido T0-T11, veredicto del dueño: sirve
 
 **Hecho:** `tests/tsconfig.json` y `typecheck` ampliado a los tres proyectos, con

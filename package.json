@@ -12,7 +12,8 @@
     "test": "node --test",
     "check:sin-datos-personales": "tsx scripts/check-sin-datos-personales.ts",
     "check:receta-ejemplo": "tsx scripts/check-receta-ejemplo.ts",
-    "probe:fase1": "tsx scripts/probe-fase1.ts"
+    "probe:fase1": "tsx scripts/probe-fase1.ts",
+    "probe:fase2": "tsx scripts/probe-fase2.ts"
   },
   "keywords": [],
   "author": "ivanpascual988@gmail.com",
@@ -23,6 +24,7 @@
   "packageManager": "pnpm@11.20.0",
   "dependencies": {
     "@ai-sdk/google": "^4.0.37",
+    "@rgrove/parse-xml": "^4.2.3",
     "ai": "^7.0.55",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"

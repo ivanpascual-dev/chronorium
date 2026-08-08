@@ -59,6 +59,29 @@ toca el motor**, y por eso puede esperar sin coste.
 personal nombra los proyectos del usuario. Se protege con el control de acceso de la plataforma, que
 es un interruptor, o se filtra esa sección al publicar.
 
+### Crecimiento medido de verdad en el radar de repositorios
+
+**Qué sería.** `repo-search` (fase 2) ordena por estrellas dentro de una consulta acotada por
+`created:` (RF-B09), que aproxima "qué ha crecido" con "qué es nuevo y tiene tracción". No es lo
+mismo: un repositorio de hace tres años que despega esta semana no aparece, porque la API de
+búsqueda de GitHub no ofrece ninguna ordenación por crecimiento real (comprobado contra su
+documentación en la fase 2). Medirlo de verdad exigiría guardar las estrellas de cada repositorio
+en cada ejecución y ordenar por el incremento entre dos lecturas.
+
+**Por qué ahora no.** Tres costes, todos medidos al decidirlo: un cuarto fichero de estado que
+`docs/03-modelo-datos.md` no contempla (el ADR-004 ya fija cuatro); ninguna línea base en la
+primera ejecución (el primer día no hay incremento que calcular); y una petición HTTP por
+repositorio candidato contra un límite de solo 10 por minuto sin autenticar, que con una lista de
+candidatos de tamaño real se agota enseguida.
+
+**Qué lo haría entrar.** Que el radar acotado por fecha de creación se quede corto **de forma
+visible durante varias semanas**: repositorios que un usuario sabe que están creciendo y que el
+informe no recoge, repetido lo bastante como para dejar de ser ruido.
+
+**Qué costaría.** El cuarto fichero de estado (con su formato fijado antes de escribir código, como
+exige `03-modelo-datos.md`), y aceptar el coste de peticiones por repositorio bajo el límite sin
+autenticar, o exigir `GITHUB_TOKEN` para esta fuente en concreto.
+
 ### Lector de Reddit
 
 **Por qué ahora no.** Exige registrar una aplicación OAuth, lo que rompería la regla de que las

@@ -5,3 +5,34 @@ topics:
 model:
   provider: google
   id: gemini-3.6-flash
+
+# Fuentes de forma distinta a las de recipes/example (mismo motivo que sus secciones distintas):
+# aquí no hay ni repo-search ni repo-releases (no hay "lanzamientos de stack" en biotecnología), y
+# sí hay archive, que example no usa.
+sources:
+  - id: hn-crispr
+    type: feed
+    url: https://hnrss.org/newest?q=CRISPR
+
+  - id: devto-science
+    type: json-api
+    url: https://dev.to/api/articles?tag=science&per_page=15
+    mapping:
+      title: title
+      url: url
+      publishedAt: published_at
+      summary: description
+
+  - id: destilado-anterior
+    type: archive
+
+window:
+  days: 14
+
+scoring:
+  recencyWeight: 1
+  topicsWeight: 4
+
+caps:
+  maxItems: 40
+  perSourceMaxPercent: 50

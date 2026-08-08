@@ -82,11 +82,12 @@ permite que sean parte del CI y no un ritual que se salta cuando hay prisa.
 
 ## Gestión de secretos
 
-| Secreto                              | Obligatorio                  | Para qué                                   |
-| ------------------------------------ | ---------------------------- | ------------------------------------------ |
-| Credencial del proveedor de modelo   | sí                           | generar el informe                         |
-| Segunda credencial de otro proveedor | **muy recomendada**          | quita el punto único de fallo. Ver ADR-009 |
-| Credenciales de correo               | según la entrega configurada | enviar el informe                          |
+| Secreto                              | Obligatorio                  | Para qué                                                                                                                                                                                                 |
+| ------------------------------------ | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Credencial del proveedor de modelo   | sí                           | generar el informe                                                                                                                                                                                       |
+| Segunda credencial de otro proveedor | **muy recomendada**          | quita el punto único de fallo. Ver ADR-009                                                                                                                                                               |
+| Credenciales de correo               | según la entrega configurada | enviar el informe                                                                                                                                                                                        |
+| `GITHUB_TOKEN`                       | **no**, opcional (fase 2)    | los lectores `repo-search` y `repo-releases` lo usan solo si está presente, para subir de 10 a 30 peticiones por minuto contra la API de GitHub; su ausencia no rompe ninguna receta de fábrica (RF-B04) |
 
 **Dos secretos para arrancar.** Cada uno de más aleja el objetivo de que un desconocido llegue a su
 primer informe en cinco minutos, y por eso Reddit queda fuera (ADR-012).

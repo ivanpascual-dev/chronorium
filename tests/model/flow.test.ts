@@ -32,6 +32,10 @@ const recipe: RecipeConfig = {
       ],
     },
   ],
+  sources: [],
+  window: { days: 30 },
+  scoring: { recencyWeight: 1, topicsWeight: 1 },
+  caps: { maxItems: 50, perSourceMaxPercent: 40 },
 };
 
 const items: Item[] = [

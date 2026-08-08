@@ -210,6 +210,9 @@ importers:
       '@ai-sdk/google':
         specifier: ^4.0.37
         version: 4.0.37(zod@4.4.3)
+      '@rgrove/parse-xml':
+        specifier: ^4.2.3
+        version: 4.2.3
       ai:
         specifier: ^7.0.55
         version: 7.0.55(zod@4.4.3)
@@ -469,6 +472,10 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@rgrove/parse-xml@4.2.3':
+    resolution: {integrity: sha512-Jhlb+0zYez1T1yXUQs3F1qAtFuJljBVNdy9TKmLDauAXkxsOXopKYOyQ5Wm6SvP3fycav0GviX4Y15WWhGetMw==}
+    engines: {node: '>=14.0.0'}
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -791,6 +798,8 @@ snapshots:
 
   '@esbuild/win32-x64@0.28.1':
     optional: true
+
+  '@rgrove/parse-xml@4.2.3': {}
 
   '@standard-schema/spec@1.1.0': {}
 
