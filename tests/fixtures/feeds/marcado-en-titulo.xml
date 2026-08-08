@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Canal con marcado en el título</title>
+    <link>https://example.com/</link>
+    <description>El título trae etiquetas de script y de imagen con manejador, escapadas como entidades HTML, que es como llegan de verdad en un canal real.</description>
+    <item>
+      <title>Oferta &lt;script&gt;alert(1)&lt;/script&gt; y &lt;img src=x onerror=alert(2)&gt;</title>
+      <link>https://example.com/marcado/uno</link>
+      <description>Resumen normal.</description>
+      <pubDate>Wed, 05 Aug 2026 08:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

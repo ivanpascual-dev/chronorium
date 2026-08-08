@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Canal con fecha inválida</title>
+    <link>https://example.com/</link>
+    <description>El pubDate no es una fecha interpretable.</description>
+    <item>
+      <title>Entrada con fecha rota</title>
+      <link>https://example.com/fecha-invalida/uno</link>
+      <description>El pubDate de esta entrada es texto sin sentido.</description>
+      <pubDate>no es una fecha</pubDate>
+    </item>
+  </channel>
+</rss>

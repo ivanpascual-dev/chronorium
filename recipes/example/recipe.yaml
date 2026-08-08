@@ -5,3 +5,39 @@ topics:
 model:
   provider: google
   id: gemini-3.6-flash
+
+# Fuentes públicas reales, sin credencial más allá de la del modelo (RF-B04).
+sources:
+  - id: hn-agentes-ia
+    type: feed
+    url: https://hnrss.org/newest?q=AI+agent
+
+  - id: devto-ia
+    type: json-api
+    url: https://dev.to/api/articles?tag=ai&per_page=15
+    mapping:
+      title: title
+      url: url
+      publishedAt: published_at
+      summary: description
+
+  - id: radar-frameworks-ia
+    type: repo-search
+    query: 'topic:llm-agents language:typescript'
+
+  - id: lanzamientos-stack
+    type: repo-releases
+    repos:
+      - vercel/ai
+      - biomejs/biome
+
+window:
+  days: 7
+
+scoring:
+  recencyWeight: 2
+  topicsWeight: 3
+
+caps:
+  maxItems: 60
+  perSourceMaxPercent: 40

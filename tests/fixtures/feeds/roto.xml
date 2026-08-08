@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Canal roto</title>
+    <link>https://example.com/</link>
+    <description>XML mal cerrado a propósito.
+    <item>
+      <title>Entrada dentro de una etiqueta sin cerrar</title>
+      <link>https://example.com/roto/uno</link>
+      <description>Esto nunca cierra el channel ni el rss.</description>

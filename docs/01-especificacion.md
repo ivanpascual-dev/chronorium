@@ -103,6 +103,15 @@ sistema **deberá** tratarlo como de fecha desconocida y **no asignarle puntuaci
 **RF-B08** (ubicuo) · El sistema **deberá** identificarse ante las fuentes con un identificador de
 cliente propio del proyecto, sin suplantar a un navegador ni incluir datos personales.
 
+**RF-B09** (por evento) · **CUANDO** se lea una fuente de búsqueda de repositorios, el sistema
+**deberá** acotar la consulta a la ventana temporal declarada en la receta, y **nunca** ordenar por
+total acumulado sin acotarla.
+
+> _Por qué:_ la API no ofrece ninguna ordenación por crecimiento. Pedir el total acumulado sin acotar
+> devuelve los mismos repositorios grandes todos los días, y un radar que repite deja de ser un radar.
+> _Criterio:_ la petición construida contiene el cualificador de fecha derivado de la ventana.
+> Verificable con un doble de `fetch`, sin red.
+
 ---
 
 ## C · Memoria entre ejecuciones

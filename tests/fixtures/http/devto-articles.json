@@ -1,0 +1,28 @@
+[
+  {
+    "type_of": "article",
+    "id": 1000001,
+    "title": "Building agentic workflows with structured output",
+    "description": "A walkthrough of constraining model output to a JSON Schema instead of parsing free text.",
+    "url": "https://dev.to/example-author/building-agentic-workflows-1a2b",
+    "published_at": "2026-08-05T09:00:00Z",
+    "tag_list": ["ai", "agents"]
+  },
+  {
+    "type_of": "article",
+    "id": 1000002,
+    "title": "What a week of running an LLM agent in production taught me",
+    "description": "Notes on retries, rate limits, and the one dependency that turned out to be a single point of failure.",
+    "url": "https://dev.to/example-author/running-an-llm-agent-in-production-3c4d",
+    "published_at": "2026-08-04T09:00:00Z",
+    "tag_list": ["ai", "productivity"]
+  },
+  {
+    "type_of": "article",
+    "id": 1000003,
+    "title": "An article with no published_at, to check the mapping tolerates it",
+    "description": "Missing the field this recipe maps to publishedAt.",
+    "url": "https://dev.to/example-author/sin-fecha-5e6f",
+    "tag_list": ["ai"]
+  }
+]

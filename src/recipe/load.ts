@@ -2,7 +2,15 @@ import { readFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { deriveSections } from './schema.ts';
-import type { ModelConfig, RecipeConfig, ValidationIssue } from './types.ts';
+import type {
+  CapsConfig,
+  ModelConfig,
+  RecipeConfig,
+  ScoringConfig,
+  SourceSpec,
+  ValidationIssue,
+  WindowConfig,
+} from './types.ts';
 import { validateRecipeFields } from './validate.ts';
 
 export class RecipeLoadError extends Error {
@@ -67,7 +75,15 @@ export function loadRecipe(recipeDir: string): RecipeConfig {
     throw new RecipeLoadError(formatIssues(issues), issues);
   }
 
-  const recipe = recipeRaw as { language: string; topics: readonly string[]; model: ModelConfig };
+  const recipe = recipeRaw as {
+    language: string;
+    topics: readonly string[];
+    model: ModelConfig;
+    sources: readonly SourceSpec[];
+    window: WindowConfig;
+    scoring: ScoringConfig;
+    caps: CapsConfig;
+  };
 
   return {
     language: recipe.language,
@@ -75,5 +91,9 @@ export function loadRecipe(recipeDir: string): RecipeConfig {
     model: recipe.model,
     persona: { text: personaText },
     sections: sectionsResult.value.sections,
+    sources: recipe.sources,
+    window: recipe.window,
+    scoring: recipe.scoring,
+    caps: recipe.caps,
   };
 }

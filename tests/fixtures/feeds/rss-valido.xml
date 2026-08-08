@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Ejemplo RSS</title>
+    <link>https://example.com/</link>
+    <description>Canal de prueba, RSS 2.0 bien formado.</description>
+    <item>
+      <title>Primera entrada válida</title>
+      <link>https://example.com/articulos/primera</link>
+      <description>Resumen de la primera entrada, sin nada raro.</description>
+      <pubDate>Wed, 05 Aug 2026 08:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Segunda entrada válida</title>
+      <link>https://example.com/articulos/segunda</link>
+      <description>Resumen de la segunda entrada.</description>
+      <pubDate>Tue, 04 Aug 2026 10:30:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

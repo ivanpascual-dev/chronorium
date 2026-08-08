@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Canal sin fechas</title>
+    <link>https://example.com/</link>
+    <description>Ningún elemento trae pubDate.</description>
+    <item>
+      <title>Entrada sin fecha, una</title>
+      <link>https://example.com/sin-fecha/uno</link>
+      <description>No hay pubDate en ningún elemento de este canal.</description>
+    </item>
+    <item>
+      <title>Entrada sin fecha, dos</title>
+      <link>https://example.com/sin-fecha/dos</link>
+      <description>Tampoco esta trae fecha.</description>
+    </item>
+  </channel>
+</rss>

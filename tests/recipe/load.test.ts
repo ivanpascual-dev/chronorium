@@ -12,6 +12,18 @@ topics:
 model:
   provider: google
   id: gemini-test
+sources:
+  - id: canal-de-prueba
+    type: feed
+    url: https://example.com/feed.xml
+window:
+  days: 30
+scoring:
+  recencyWeight: 1
+  topicsWeight: 1
+caps:
+  maxItems: 60
+  perSourceMaxPercent: 40
 `;
 
 const VALID_SECTIONS_YAML = `

@@ -51,16 +51,19 @@ para y replantea.
 
 ## FASE 2 · Recolección y memoria
 
-- [ ] Tests de la lógica pura primero: puntuación, deduplicación, ventana temporal, interpretación de
+- [x] Tests de la lógica pura primero: puntuación, deduplicación, ventana temporal, interpretación de
       fechas, tope por fuente
-- [ ] Ficheros de prueba guardados con los casos reales que rompieron el sistema anterior: canal sin
+- [x] Ficheros de prueba guardados con los casos reales que rompieron el sistema anterior: canal sin
       fecha, con fecha inválida, vacío, caído, y con título que intenta inyectar instrucciones
-- [ ] Registro de lectores y los cinco tipos (`feed`, `json-api`, `repo-search`, `repo-releases`,
+- [x] Registro de lectores y los cinco tipos (`feed`, `json-api`, `repo-search`, `repo-releases`,
       `archive`)
-- [ ] Aislamiento de fuente caída: registrar, continuar, reportar por fuente
-- [ ] Memoria persistente de lo ya mostrado, con poda por ventana
-- [ ] Corrección del radar de repositorios: ordenar por crecimiento en la ventana, no por total
+- [x] Aislamiento de fuente caída: registrar, continuar, reportar por fuente
+- [x] Memoria persistente de lo ya mostrado, con poda por ventana
+- [x] Corrección del radar de repositorios: ordenar por crecimiento en la ventana, no por total
       acumulado, y excluir lo mostrado en los últimos 30 días
+
+  **Construida, pendiente de confirmación del dueño (ver `docs/bitacora.md`).** `@fiel-al-plan` y
+  `/verifier` no se lanzan hasta esa confirmación.
 
 ---
 
@@ -127,6 +130,9 @@ Cada uno con su porqué en `06-extensibilidad.md`. No son deuda, son criterio.
   **no** eligió. Sobre lo que sí eligió, pegar el informe en otra herramienta ya funciona mejor
 - **Sitio propio en un subdominio.** Se añade conectando un servicio de páginas estáticas al
   repositorio de la instancia, sin tocar el motor
+- **Crecimiento medido de verdad en el radar de repositorios.** `repo-search` (fase 2) aproxima
+  "qué crece" con "qué es nuevo", porque la API no ofrece ninguna ordenación por crecimiento
+  (RF-B09). Entra si esa aproximación se queda corta de forma visible durante varias semanas
 - **Lector de Reddit.** Cuando exista un camino que no obligue a todos los usuarios a registrar una
   aplicación OAuth
 - **Publicación en el registro de paquetes.** Cuando alguien la pida

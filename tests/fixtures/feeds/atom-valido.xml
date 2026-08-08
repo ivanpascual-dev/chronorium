@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Ejemplo Atom</title>
+  <link href="https://example.org/"/>
+  <entry>
+    <title>Entrada Atom con published</title>
+    <link href="https://example.org/entradas/una"/>
+    <summary>Resumen de la entrada con fecha de publicación explícita.</summary>
+    <published>2026-08-05T08:00:00Z</published>
+    <updated>2026-08-06T09:00:00Z</updated>
+  </entry>
+  <entry>
+    <title>Entrada Atom solo con updated</title>
+    <link href="https://example.org/entradas/dos"/>
+    <summary>Esta entrada no trae published, solo updated.</summary>
+    <updated>2026-08-04T12:00:00Z</updated>
+  </entry>
+</feed>

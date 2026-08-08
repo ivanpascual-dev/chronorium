@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "boletin": "semanal",
+  "fecha": "2026-05-20",
+  "secciones": [
+    {
+      "nombre": "Lo más relevante",
+      "elementos": [
+        {
+          "titulo": "El sistema anterior publica su boletín semanal número doce",
+          "enlace": "https://example-devblog.test/boletin-12",
+          "resumen": "Formato previo a junio de 2026, con nombres de campo distintos."
+        },
+        {
+          "titulo": "Retrospectiva de los primeros tres meses",
+          "enlace": "https://example-devblog.test/retrospectiva-q1",
+          "resumen": "Elemento del mismo boletín, para probar que el lector recorre varios."
+        }
+      ]
+    }
+  ]
+}
