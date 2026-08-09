@@ -10,10 +10,13 @@
 
 ```text
 src/model/
-  client.ts    llamada al proveedor con el esquema derivado
-  chain.ts     orden de proveedores, validación de credenciales, aviso de punto único de fallo
-  retry.ts     política de reintento por clase de error
-  prompt.ts    composición del prompt desde la receta
+  client.ts     llamada al proveedor con el esquema derivado (maxRetries: 0, ver más abajo)
+  providers.ts  registro de proveedor → cómo construir su LanguageModel, por `provider` declarado
+  chain.ts      diagnóstico de la cadena (créditos utilizables, punto único de fallo) y su recorrido
+  retry.ts      clasificación de errores y política de reintento por clase
+  links.ts      único punto que valida un enlace de la salida contra el conjunto de entrada
+  synthesize.ts única capacidad de "producir un informe validado" (R10, RF-F06)
+  prompt.ts     composición del prompt desde la receta, con el delimitador blindado
 ```
 
 Es la única capa que habla con un modelo. Si otra carpeta importa el SDK, hay un problema de
@@ -86,6 +89,47 @@ Al ejecutar:
 - **Temperatura baja.** Esto no es escritura creativa: es síntesis con estructura fija.
 - **Límite de tokens de salida acotado** y coherente con la cardinalidad máxima de las secciones.
 - **Tope de elementos de entrada** aplicado antes de llamar, nunca después.
+- **`maxRetries: 0` en la llamada al SDK (`client.ts`), a propósito.** Es una sola capa de
+  reintento, la nuestra (`retry.ts`), la que ADR-009 describe. El reintento por defecto del SDK no
+  distingue un 401 permanente de un 503 pasajero; dos capas juntas reintentarían lo que la de fuera
+  se niega a reintentar. No subas este número dentro de seis meses sin releer el ADR-009.
+
+## El delimitador del prompt no se puede cerrar desde fuera
+
+Cada elemento aporta cuatro campos de terceros: `title`, `url`, `source`, `summary`. Cualquiera de
+los cuatro puede contener `</elementos-no-confiables>` (o la apertura, con o sin atributos) tratando
+de escribir fuera del bloque no confiable. `prompt.ts` neutraliza esa etiqueta en los cuatro campos,
+en el único punto que los renderiza (`renderItem`): sustituye los ángulos por caracteres que no
+forman una etiqueta real, sin borrar el texto. El invariante que el test comprueba sobre el prompt
+compuesto entero: exactamente una apertura y un cierre reales, los que añade el propio código.
+
+## La cadena de proveedores, en código
+
+- `providers.ts` es el registro: nombre de proveedor declarado en la receta → cómo construir su
+  `LanguageModel`. Tres entradas de fábrica, `google`, `openai` y `openai-compatible`. Se elige por
+  el nombre, nunca inspeccionando la URL o el identificador de modelo (D-03, ADR-012).
+- `chain.ts` expone dos funciones: `diagnoseChain` (sin red, para `validate`/`doctor` en fase 4) y
+  `runChain` (recorre la cadena de verdad, usada solo por `synthesize()`).
+- El conjunto de marcadores de posición que `RF-D05` rechaza vive en `chain.ts`
+  (`PLACEHOLDER_CREDENTIALS`) y está documentado en `docs/05-seguridad-legal.md`: son el mismo
+  texto, y si uno cambia sin el otro es el defecto D-14.
+- **`provider: 'openai'` es el paquete oficial `@ai-sdk/openai`**, no el conector genérico. Ya
+  traduce por sí solo la convención de llamada de sus modelos de razonamiento
+  (`max_completion_tokens`, sin `temperature` propia salvo que se pida `reasoningEffort: 'none'`),
+  verificado contra su código fuente (ADR-018).
+- **`reasoningEffort` es un campo de dominio único** ("cuánto debe razonar el modelo"), con efecto en
+  `provider: 'openai'` y en `provider: 'google'`. Cada uno lo traduce a su propia convención en
+  `providers.ts` (`openAiReasoningOptions` → `providerOptions.openai.reasoningEffort`;
+  `googleReasoningOptions` → `providerOptions.google.thinkingConfig.thinkingLevel`, Gemini 3+), fijado
+  como valor por defecto de esa instancia de modelo con `wrapLanguageModel` +
+  `defaultSettingsMiddleware` (de `ai`), porque solo tiene efecto pasado en la llamada, nunca al
+  construir el modelo. Quien escribe la receta declara un único valor; el nombre que le da cada API es
+  mecanismo, no dominio.
+- **`openai-compatible` se queda como vía genérica** para quien declare otro proveedor remoto
+  compatible (DeepSeek, Groq, OpenRouter) o un modelo local: exige `baseUrl`, y no interpreta
+  `reasoningEffort` (se valida el tipo, pero ese conector lo ignora). Si algún día un proveedor
+  concreto por esa vía necesita una traducción parecida a la de `openai`/`google`, se declara con su
+  propio campo en la receta y su propio ADR, no se adivina por el identificador.
 
 ---
 

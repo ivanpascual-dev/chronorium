@@ -27,9 +27,26 @@ export interface Persona {
   readonly text: string;
 }
 
-export interface ModelConfig {
+/** Un eslabón de la cadena de proveedores, declarado en la receta. `apiKeyEnv` es el NOMBRE de la
+ * variable de entorno, nunca el valor (R3): ausente ⇒ la variable por defecto del proveedor. */
+export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high';
+
+export interface ProviderSpec {
   readonly provider: string;
   readonly id: string;
+  readonly apiKeyEnv?: string;
+  /** Solo `openai-compatible`: el endpoint del proveedor concreto. */
+  readonly baseUrl?: string;
+  /** Con `provider: 'openai'` o `'google'`: cuánto debe razonar el modelo antes de responder. Es un
+   * campo de dominio único, y cada proveedor lo traduce a su propia convención en `providers.ts`
+   * (`reasoningEffort` en OpenAI, `thinkingConfig.thinkingLevel` en Gemini 3+, ADR-018): quien
+   * escribe la receta no necesita saber cuál. */
+  readonly reasoningEffort?: ReasoningEffort;
+}
+
+/** `provider` e `id` siguen siendo el principal (fase 1); `fallbacks` es la cadena, en orden. */
+export interface ModelConfig extends ProviderSpec {
+  readonly fallbacks?: readonly ProviderSpec[];
 }
 
 /**

@@ -7,8 +7,9 @@
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { generateReport, googleModel } from '../src/model/client.ts';
+import { generateReport } from '../src/model/client.ts';
 import { composePrompt } from '../src/model/prompt.ts';
+import { defaultProviderRegistry } from '../src/model/providers.ts';
 import { projectRoot, resolveRecipeDir } from '../src/paths.ts';
 import { runPipeline } from '../src/rank/pipeline.ts';
 import { loadRecipe } from '../src/recipe/load.ts';
@@ -91,7 +92,11 @@ async function main(): Promise<void> {
   }
 
   const prompt = composePrompt(recipe, ranked);
-  const model = await googleModel(recipe.model.id);
+  const googleProvider = defaultProviderRegistry.get('google');
+  if (!googleProvider) {
+    throw new Error('el registro de proveedores no tiene "google" (¿fase 3 rompió el registro?)');
+  }
+  const model = await googleProvider.create(recipe.model, apiKey);
   const report = await generateReport({ model, prompt, derived: derivedResult.value });
 
   const outDir = join(projectRoot, 'tmp');

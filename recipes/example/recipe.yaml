@@ -5,6 +5,18 @@ topics:
 model:
   provider: google
   id: gemini-3.6-flash
+  # reasoningEffort: medium   # opcional en cualquier eslabón que lo soporte (openai o google);
+  # aquí se traduciría a thinkingConfig.thinkingLevel de Gemini, no a nada de OpenAI (ADR-018)
+  #
+  # Una receta de fábrica funciona con esta única credencial (RF-B04, RF-H04). Un segundo
+  # proveedor quita el punto único de fallo (ADR-009) y se declara así, sin tocar el código:
+  # fallbacks:
+  #   - provider: openai
+  #     id: gpt-5.6-luna
+  #     reasoningEffort: medium   # opcional; el paquete oficial resuelve el resto (ADR-018)
+  #     # apiKeyEnv por defecto es OPENAI_API_KEY (R3); declárala solo si usas otro nombre.
+  #     # Para otro proveedor remoto compatible (DeepSeek, Groq, OpenRouter) o un modelo local,
+  #     # usa provider: openai-compatible, con baseUrl obligatorio.
 
 # Fuentes públicas reales, sin credencial más allá de la del modelo (RF-B04).
 sources:

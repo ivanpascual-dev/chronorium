@@ -74,9 +74,28 @@ una revisión de una sola vez: es un test que corre siempre.
 | 8   | Fuente desbordada                      | fichero de prueba con 5.000 elementos                                                                     | se aplican los topes y la llamada al modelo no crece        |
 | 9   | Credencial que es marcador de posición | valor igual al de la plantilla documentada                                                                | la validación lo rechaza antes de ejecutar                  |
 | 10  | Punto único de fallo                   | una sola credencial válida configurada                                                                    | el arranque emite la advertencia                            |
+| 11  | Cierre del delimitador                 | un elemento cuyo título, resumen, url o fuente contiene `</elementos-no-confiables>`                      | no cierra el bloque real: exactamente una apertura y un cierre en el prompt compuesto |
 
-Los diez corren **sin red**: las fuentes son ficheros guardados y el modelo es un doble. Eso es lo que
-permite que sean parte del CI y no un ritual que se salta cuando hay prisa.
+Los once corren **sin red**: las fuentes son ficheros guardados o generados en el propio test, y el
+modelo es un doble. Eso es lo que permite que sean parte del CI y no un ritual que se salta cuando
+hay prisa. Viven en `tests/security/bateria.test.ts`, cableados como comando (`pnpm run bateria`).
+
+**El conjunto de marcadores de posición del caso 9**, declarado en un solo sitio
+(`src/model/chain.ts`, `PLACEHOLDER_CREDENTIALS`) y documentado aquí para que quien escriba la guía
+de instalación sepa qué texto de ejemplo puede poner sin que, si alguien lo copia y lo deja tal cual,
+la validación lo confunda con una credencial real:
+
+```text
+tu_api_key_aqui
+your_api_key_here
+changeme
+replace_with_your_key
+xxxxxxxx
+```
+
+Coincidencia exacta contra este conjunto, sin distinguir mayúsculas y sin espacios alrededor, más
+vacío o solo espacios. Nada de heurísticas de longitud o de prefijo: un falso positivo aquí es un día
+sin informe.
 
 ---
 

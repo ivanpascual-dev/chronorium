@@ -69,13 +69,16 @@ para y replantea.
 
 ## FASE 3 · Modelo, cadena de proveedores y seguridad
 
-- [ ] Tests de la política de reintento por clase de error, **sin red**
-- [ ] Test de la advertencia de punto único de fallo: con una credencial la emite, con dos no
-- [ ] Test del rechazo de credenciales que sean un marcador de posición
-- [ ] Cliente de modelos, cadena de proveedores y reintento
-- [ ] **Validación de enlaces contra el conjunto de entrada**, con su test
-- [ ] Delimitación de la entrada no confiable en el prompt
-- [ ] Batería de ataques repetible (`docs/05-seguridad-legal.md`), cableada como comando
+- [x] Tests de la política de reintento por clase de error, **sin red**
+- [x] Test de la advertencia de punto único de fallo: con una credencial la emite, con dos no
+- [x] Test del rechazo de credenciales que sean un marcador de posición
+- [x] Cliente de modelos, cadena de proveedores y reintento
+- [x] **Validación de enlaces contra el conjunto de entrada**, con su test
+- [x] Delimitación de la entrada no confiable en el prompt, con el delimitador blindado
+- [x] Batería de ataques repetible (`docs/05-seguridad-legal.md`), cableada como comando
+
+  **Construida, pendiente de confirmación del dueño (ver `docs/bitacora.md`).** `@fiel-al-plan` y
+  `/verifier` no se lanzan hasta esa confirmación.
 
 ---
 

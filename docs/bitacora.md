@@ -61,6 +61,164 @@ hacer: el código dice cómo quedó, pero no qué se intentó antes ni qué se d
 
 ## Entradas
 
+## 2026-08-09 · Fase 3 · Corrección post-cierre: `@ai-sdk/openai` en vez del parche sobre `openai-compatible`
+
+**Hecho.** Tras comitear el cierre de la fase 3 (T0-T15, con `guardarrailes` y `/verifier` ya
+pasados sobre ese estado), la revisión de cierre encontró que el segundo eslabón real
+(`gpt-5.6-luna`) se servía a través del conector genérico `openai-compatible` más código propio
+(`reasoningModel: boolean`, `reasoningEffort`, `transformRequestBody` en `src/model/providers.ts`)
+que traducía a mano `max_tokens`→`max_completion_tokens` y quitaba `temperature`. Verificado contra
+el código fuente del paquete oficial `@ai-sdk/openai` (auditado con `@dependency-audit`, versión
+`4.0.36`, cero dependencias transitivas nuevas: ya las arrastraban `@ai-sdk/google` y
+`@ai-sdk/openai-compatible`) que la Responses API (`openai(modelId).responses`) ya resuelve esa
+misma traducción de fábrica. Se sustituyó: `providers.ts` gana una tercera entrada de fábrica,
+`openai`, y pierde `reasoningModelBody`; `ProviderSpec` pierde `reasoningModel`, se queda con
+`reasoningEffort`, fijado con `wrapLanguageModel` + `defaultSettingsMiddleware` (de `ai`) porque solo
+tiene efecto en la llamada, no al construir el modelo. `openai-compatible` se queda registrada,
+documentada como vía genérica para quien declare DeepSeek, Groq, OpenRouter o un modelo local.
+`recipes/example` (comentario), la fixture biotech y `scripts/probe-fase3.ts` pasan a
+`provider: openai`. `ADR-018` se reescribió in situ (no se creó un ADR-019) porque nada de la versión
+anterior se había comiteado todavía: es la misma sesión, corrigiendo el mecanismo antes de dar la
+fase por cerrada de verdad.
+
+**Se desvió.** El cierre de la fase 3 se comiteó primero con el mecanismo antiguo (parche sobre
+`openai-compatible`), a petición explícita del dueño, para no mezclar en un solo commit "lo que
+`fiel-al-plan` y `guardarrailes` ya verificaron" con "la corrección posterior". El commit de la fase
+(`faf3380`) representa un estado real que pasó todas las puertas, aunque no sea el que queda en el
+árbol al terminar esta sesión.
+
+**Aprendido.**
+
+- `@ai-sdk/openai`, `@ai-sdk/google` y `@ai-sdk/openai-compatible` comparten los mismos dos paquetes
+  internos (`@ai-sdk/provider`, `@ai-sdk/provider-utils`): añadir el oficial no añade una rama nueva
+  al árbol de dependencias, solo sube dos paquetes ya presentes a la siguiente versión de parche. Es
+  el caso ideal para no dudar antes de instalar un SDK de proveedor oficial en vez de mantener un
+  parche propio sobre el genérico.
+- `defaultSettingsMiddleware` (de `ai`) es el mecanismo documentado para fijar `providerOptions` por
+  defecto en una instancia de modelo concreta, sin tocar el código que hace la llamada
+  (`generateText`). Resuelve exactamente el problema de "esta opción solo existe por llamada, pero mi
+  registro de proveedores solo construye el modelo una vez", sin romper el contrato
+  `ProviderFactory.create(spec, apiKey): Promise<LanguageModel>`.
+- Si `client.ts` manda `temperature` en una llamada a un modelo de razonamiento con `reasoningEffort`
+  distinto de `'none'`, la Responses API ya no la rechaza: la omite y añade un aviso
+  (`result.warnings`, tipo `unsupported`). Queda anotado, no se actúa: no hay ningún sitio hoy que
+  lea `result.warnings`, y no es tarea de esta corrección añadirlo.
+
+## 2026-08-09 · Fase 3 · T14/T15 con red real: la cadena cambia de Groq a gpt-5.6-luna
+
+**Hecho.** Se ejecutó `pnpm run probe:fase3` con credenciales reales (T14), lo que sacó a la luz un
+fallo de construcción real: `createOpenAiCompatibleModel` (`providers.ts`) nunca activaba
+`supportsStructuredOutputs`, así que el SDK pedía el modo débil `json_object` en vez de
+`json_schema` con `strict: true`. Corregido. Con la corrección, la caída al respaldo (entonces Groq)
+funcionó de punta a punta, pero con el informe completo (`caps.maxItems: 60`, ~22.000 tokens de
+entrada) Groq rechazó la petición por su límite gratuito de 8.000 tokens por minuto: un límite real,
+no simulable con un doble. El dueño decidió sustituir Groq por `gpt-5.6-luna` (OpenAI) en
+razonamiento medio, tras comparar un informe real de cada uno: coste de menos de un centavo por
+informe, calidad igual o mejor (más elementos cubiertos, acciones más concretas, mejor alineación
+con la persona) en la única muestra comparada. Para sostenerlo se añadieron dos campos declarables
+por eslabón, validados en `recipe/validate.ts`: `reasoningModel: boolean` y
+`reasoningEffort: 'minimal' | 'low' | 'medium' | 'high'`; `providers.ts` los traduce con
+`transformRequestBody` (D-03: no se detecta por el identificador, se declara). Sin esa traducción,
+la API de OpenAI para sus modelos de razonamiento nuevos rechaza `max_tokens` (exige
+`max_completion_tokens`) y cualquier `temperature` distinta de la suya por defecto: dos rechazos
+reales más que ningún test con doble podía haber encontrado. 198 tests en verde (7 nuevos: 3 de
+validación de los campos nuevos, 4 de `reasoningModelBody`), typecheck, lint, build y batería de 11
+casos limpios. `recipes/example` (comentario) y la receta de prueba de biotech quedaron con Luna;
+Groq no queda en ningún fichero de producción.
+
+**Se desvió.** El plan de la fase 3 no mencionaba a Luna ni los campos `reasoningModel`/
+`reasoningEffort`: nacieron de una comparación pedida por el dueño después de que T14 mostrara que
+Groq no aguantaba el informe completo. No es un cambio de alcance (la cadena de proveedores y su
+validación ya estaban en el plan): es el mismo mecanismo con un proveedor distinto y dos campos más
+para que ese proveedor concreto funcione.
+
+**Costó más de lo previsto.** Cada llamada real a `gpt-5.6-luna` reveló un rechazo nuevo de la API,
+uno detrás de otro: primero la falta de `supportsStructuredOutputs` (el mensaje de error apuntaba a
+"json" en el mensaje para `json_object`, no al motivo real), luego `max_tokens` no soportado, luego
+`temperature` distinta de 1 no soportada. Ningún test con modelo simulado los habría encontrado: los
+tres son de la forma exacta del cuerpo HTTP que solo una llamada real ejercita.
+
+**Aprendido.**
+
+- `supportsStructuredOutputs` en `createOpenAICompatible` no es opcional de facto para ningún
+  proveedor cuya única razón de estar en la cadena es garantizar el esquema: sin activarlo, el SDK
+  degrada en silencio a `json_object`, que ni siquiera exige el esquema.
+- Las cuotas gratuitas se comprueban con el tamaño real del informe, no con un puñado de elementos:
+  8.000 TPM parece de sobra hasta que se calcula sobre 60 elementos reales, no sobre 3.
+- La clave de `providerOptions` en `@ai-sdk/openai-compatible` es fija (`openaiCompatible`), no el
+  `name` que se le da al proveedor; el SDK avisa (aviso de obsolescencia) si se usa el nombre en su
+  lugar.
+- Los modelos de razonamiento de OpenAI vía `v1/chat/completions` tienen su propia convención de
+  llamada (`max_completion_tokens`, sin `temperature` propia), distinta de la que asume el conector
+  genérico `openai-compatible`.
+
+## 2026-08-08 · Fase 3 · Construido T0-T14, pendiente de confirmación del dueño
+
+**Hecho.** `retry.ts` (clasificación por `isRetryable` del propio SDK, sin adivinar por el mensaje),
+`providers.ts` (registro `google`/`openai-compatible`), `chain.ts` (`diagnoseChain` + `runChain`),
+`links.ts` (`validateLinks`, único punto que toca un enlace de la salida) y `synthesize.ts` (única
+capacidad de producir un informe validado). `client.ts` pasa `maxRetries: 0`. `prompt.ts` neutraliza
+el delimitador en los cuatro campos de cada elemento. `recipe/validate.ts` valida `model.fallbacks` y
+sustituyó `hasSecret` por `secret(name)`. Batería de once casos en `tests/security/bateria.test.ts`,
+cableada como `pnpm run bateria` y en CI. `scripts/probe-fase3.ts` deja listo el diagnóstico de la
+cadena (que sí corrió, sin credenciales) y los tres comandos exactos para completarlo con red real.
+191 tests en verde, sin red y sin credenciales; typecheck y lint limpios.
+
+**Se desvió.**
+
+- **El segundo proveedor de la receta biotech y del comentario de `recipes/example` es Groq, no
+  DeepSeek**, que es lo que sugería la lista del plan (DeepSeek, Groq, OpenRouter, local). T0 pedía
+  verificar contra la documentación del día si la salida estructurada aguanta en ese proveedor, y no
+  aguantaba: la API de DeepSeek documenta hoy solo el modo `json_object` genérico, sin `json_schema`
+  estricto. Groq documenta `response_format: json_schema` con `strict: true` en `openai/gpt-oss-20b`
+  y `openai/gpt-oss-120b`, que es la garantía que `Output.object` necesita. Es exactamente el punto
+  de parada que el plan preveía ("si no aguanta, se para y se cambia a un proveedor concreto,
+  dejándolo escrito, no se improvisa"), y esta nota es ese escrito.
+- **`retry.ts` inyecta solo `sleep`, no `sleep` y `now` como sugería la prosa de T3.** No hay ningún
+  test de T2 que ejercite un segundo primitivo de reloj, y la única razón defendible para separar
+  `now` de `sleep` habría sido respetar la cabecera `retry-after` cuando llega como fecha HTTP en vez
+  de segundos, algo que ningún criterio de esta fase pide. Añadirlo habría sido un parámetro sin uso.
+  Si `retry-after` se necesita de verdad, es un cambio local a `retry.ts`, con su propio test.
+- **Los casos 2 y 3 de la batería, que vivían sueltos en `tests/sources/feed.test.ts` desde la fase
+  2**, se movieron a `tests/security/bateria.test.ts` en vez de quedarse duplicados en dos sitios:
+  el plan pide un comando "que no es una segunda implementación", y dos copias de la misma prueba en
+  ficheros distintos sí lo habría sido.
+- **La frase de "Instrucciones de salida" del prompt** citaba literalmente
+  `<elementos-no-confiables>` en prosa ("usa únicamente las URLs que aparecen dentro de
+  &lt;elementos-no-confiables&gt;"), lo que hacía que el prompt sin ningún ataque ya tuviera dos
+  apariciones de la apertura del delimitador. El test de T8 que exige "exactamente una apertura y un
+  cierre" habría sido falso incluso sin inyección. Se cambió la frase a prosa sin repetir la
+  sintaxis de la etiqueta; el significado no cambia.
+- **`scripts/probe-fase1.ts` y `scripts/probe-fase2.ts` se tocaron**, aunque no están en la lista de
+  ficheros de esta fase: importaban `googleModel` de `client.ts`, que esta fase retira (su trabajo
+  pasa al registro de `providers.ts`, R10). Sin el ajuste, ambos scripts habrían roto el `typecheck`.
+
+**Costó más de lo previsto.** Verificar el riesgo real de T0 (si la salida estructurada aguanta en el
+proveedor elegido) exigió tres consultas a documentación viva porque la primera fuente
+(`ai-sdk.dev/providers/openai-compatible-providers/deepseek`, vía Context7) no distinguía el modo
+`json_object` del `json_schema` estricto; hubo que ir a la documentación oficial de DeepSeek
+(`api-docs.deepseek.com`) y de Groq (`console.groq.com/docs/structured-outputs`) para confirmar la
+diferencia y el modelo concreto que la garantiza.
+
+**Deuda.** T14 se detuvo donde el plan dice que debe detenerse sin credenciales: la parte 1 (diagnóstico
+de la cadena) corrió de verdad, sin avisos porque no hay ningún proveedor vivo en este entorno; las
+partes 2 y 3 (informe real, caída al respaldo de verdad, inyección contra el modelo real) y **todo
+T15** (el juicio del dueño sobre esa salida) quedan pendientes de que el dueño exporte
+`GOOGLE_GENERATIVE_AI_API_KEY` (y, para ver la caída de verdad, también `GROQ_API_KEY`) y ejecute
+`pnpm run probe:fase3`. Sin eso, esta fase no se puede dar por probada, y `@fiel-al-plan`/`/verifier`
+no se lanzan hasta esa confirmación (regla del ciclo de trabajo, no algo específico de esta fase).
+
+**Aprendido.**
+
+- `node --test` con una ruta de directorio (`tests/security/` o `tests/security`) no descubre los
+  ficheros de test dentro en esta versión de Node: hace falta un patrón glob explícito
+  (`tests/security/**/*.test.ts`). El resto del proyecto no lo había notado porque `pnpm test` corre
+  `node --test` sin argumentos, que sí recorre todo el árbol por defecto.
+- La clasificación de errores del propio SDK (`APICallError.isRetryable`, con su regla por defecto
+  `408 | 409 | 429 | >=500`) ya resuelve, sin escribir una sola condición sobre códigos de estado,
+  tres de las siete situaciones que pedía el test de reintento. Adivinar por el código a mano habría
+  sido la segunda implementación de una clasificación que el proveedor ya expone.
+
 ## 2026-08-08 · Fase 2 · Construido T0-T16, veredicto del dueño (T17): sirve
 
 **Hecho.** Los cinco lectores de fábrica (`feed`, `json-api`, `repo-search`, `repo-releases`,
