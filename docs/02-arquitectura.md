@@ -230,7 +230,7 @@ src/
   sources/      registry.ts · feed.ts · json-api.ts · repo-search.ts
                 repo-releases.ts · archive.ts
   rank/         score.ts · dedupe.ts · window.ts
-  model/        client.ts · chain.ts · retry.ts
+  model/        client.ts · chain.ts · retry.ts · links.ts · synthesize.ts · providers.ts
   render/       json.ts · markdown.ts · email.ts · escape.ts
   deliver/      registry.ts · email.ts · telegram.ts · webhook.ts
   state/        archive.ts · seen.ts · runs.ts

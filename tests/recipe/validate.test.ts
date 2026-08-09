@@ -57,7 +57,7 @@ test('una fuente que exige una credencial ausente se rechaza al validar, sin red
       scoring: { recencyWeight: 1, topicsWeight: 1 },
       caps: { maxItems: 10, perSourceMaxPercent: 50 },
     },
-    { registry, hasSecret: () => false },
+    { registry, secret: () => undefined },
   );
 
   assert.ok(issues.some((issue) => issue.motivo.includes('UNA_CLAVE_QUE_NO_ESTA')));
@@ -81,7 +81,7 @@ test('con la credencial presente, la misma fuente no produce error', () => {
       scoring: { recencyWeight: 1, topicsWeight: 1 },
       caps: { maxItems: 10, perSourceMaxPercent: 50 },
     },
-    { registry, hasSecret: () => true },
+    { registry, secret: () => 'clave-de-prueba' },
   );
 
   assert.deepEqual(issues, []);
@@ -185,6 +185,172 @@ test('caps.maxItems y caps.perSourceMaxPercent ausentes o inválidos producen er
 
   assert.ok(campos(issues).includes('caps.maxItems'));
   assert.ok(campos(issues).includes('caps.perSourceMaxPercent'));
+});
+
+test('un proveedor de modelo desconocido produce un error que nombra el proveedor', () => {
+  const issues = validateRecipeFields({
+    ...validBase,
+    model: { provider: 'proveedor-inventado', id: 'x' },
+    sources: [],
+    window: { days: 30 },
+    scoring: { recencyWeight: 1, topicsWeight: 1 },
+    caps: { maxItems: 10, perSourceMaxPercent: 50 },
+  });
+
+  assert.ok(campos(issues).includes('model.provider'));
+  assert.ok(issues.some((issue) => issue.motivo.includes('proveedor-inventado')));
+});
+
+test('un eslabón "openai-compatible" sin baseUrl produce un error que nombra el campo', () => {
+  const issues = validateRecipeFields({
+    ...validBase,
+    model: {
+      provider: 'google',
+      id: 'gemini-test',
+      fallbacks: [{ provider: 'openai-compatible', id: 'openai/gpt-oss-20b' }],
+    },
+    sources: [],
+    window: { days: 30 },
+    scoring: { recencyWeight: 1, topicsWeight: 1 },
+    caps: { maxItems: 10, perSourceMaxPercent: 50 },
+  });
+
+  assert.ok(campos(issues).includes('model.fallbacks[0].baseUrl'));
+});
+
+test('un eslabón "openai-compatible" con baseUrl no produce error', () => {
+  const issues = validateRecipeFields({
+    ...validBase,
+    model: {
+      provider: 'google',
+      id: 'gemini-test',
+      fallbacks: [
+        {
+          provider: 'openai-compatible',
+          id: 'openai/gpt-oss-20b',
+          apiKeyEnv: 'GROQ_API_KEY',
+          baseUrl: 'https://api.groq.com/openai/v1',
+        },
+      ],
+    },
+    sources: [],
+    window: { days: 30 },
+    scoring: { recencyWeight: 1, topicsWeight: 1 },
+    caps: { maxItems: 10, perSourceMaxPercent: 50 },
+  });
+
+  assert.deepEqual(issues, []);
+});
+
+test('un eslabón "openai-compatible" con reasoningModel y reasoningEffort válidos no produce error', () => {
+  const issues = validateRecipeFields({
+    ...validBase,
+    model: {
+      provider: 'google',
+      id: 'gemini-test',
+      fallbacks: [
+        {
+          provider: 'openai-compatible',
+          id: 'gpt-5.6-luna',
+          baseUrl: 'https://api.openai.com/v1',
+          reasoningModel: true,
+          reasoningEffort: 'medium',
+        },
+      ],
+    },
+    sources: [],
+    window: { days: 30 },
+    scoring: { recencyWeight: 1, topicsWeight: 1 },
+    caps: { maxItems: 10, perSourceMaxPercent: 50 },
+  });
+
+  assert.deepEqual(issues, []);
+});
+
+test('"reasoningModel" que no es verdadero o falso produce un error que nombra el campo', () => {
+  const issues = validateRecipeFields({
+    ...validBase,
+    model: {
+      provider: 'google',
+      id: 'gemini-test',
+      fallbacks: [
+        {
+          provider: 'openai-compatible',
+          id: 'gpt-5.6-luna',
+          baseUrl: 'https://api.openai.com/v1',
+          reasoningModel: 'sí',
+        },
+      ],
+    },
+    sources: [],
+    window: { days: 30 },
+    scoring: { recencyWeight: 1, topicsWeight: 1 },
+    caps: { maxItems: 10, perSourceMaxPercent: 50 },
+  });
+
+  assert.ok(campos(issues).includes('model.fallbacks[0].reasoningModel'));
+});
+
+test('"reasoningEffort" fuera del conjunto válido produce un error que nombra el campo', () => {
+  const issues = validateRecipeFields({
+    ...validBase,
+    model: {
+      provider: 'google',
+      id: 'gemini-test',
+      fallbacks: [
+        {
+          provider: 'openai-compatible',
+          id: 'gpt-5.6-luna',
+          baseUrl: 'https://api.openai.com/v1',
+          reasoningModel: true,
+          reasoningEffort: 'maximo',
+        },
+      ],
+    },
+    sources: [],
+    window: { days: 30 },
+    scoring: { recencyWeight: 1, topicsWeight: 1 },
+    caps: { maxItems: 10, perSourceMaxPercent: 50 },
+  });
+
+  assert.ok(campos(issues).includes('model.fallbacks[0].reasoningEffort'));
+});
+
+test('un eslabón que repite el proveedor principal produce un error', () => {
+  const issues = validateRecipeFields({
+    ...validBase,
+    model: {
+      provider: 'google',
+      id: 'gemini-test',
+      fallbacks: [{ provider: 'google', id: 'gemini-test' }],
+    },
+    sources: [],
+    window: { days: 30 },
+    scoring: { recencyWeight: 1, topicsWeight: 1 },
+    caps: { maxItems: 10, perSourceMaxPercent: 50 },
+  });
+
+  assert.ok(campos(issues).includes('model.fallbacks[0]'));
+});
+
+test('dos eslabones de respaldo repetidos entre sí producen un error', () => {
+  const issues = validateRecipeFields({
+    ...validBase,
+    model: {
+      provider: 'google',
+      id: 'gemini-test',
+      fallbacks: [
+        { provider: 'openai-compatible', id: 'm', baseUrl: 'https://a.example/v1' },
+        { provider: 'openai-compatible', id: 'm', baseUrl: 'https://a.example/v1' },
+      ],
+    },
+    sources: [],
+    window: { days: 30 },
+    scoring: { recencyWeight: 1, topicsWeight: 1 },
+    caps: { maxItems: 10, perSourceMaxPercent: 50 },
+  });
+
+  assert.ok(campos(issues).includes('model.fallbacks[1]'));
 });
 
 test('todos los errores se devuelven juntos, no se aborta en el primero', () => {

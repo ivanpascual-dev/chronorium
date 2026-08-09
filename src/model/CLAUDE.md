@@ -10,10 +10,13 @@
 
 ```text
 src/model/
-  client.ts    llamada al proveedor con el esquema derivado
-  chain.ts     orden de proveedores, validación de credenciales, aviso de punto único de fallo
-  retry.ts     política de reintento por clase de error
-  prompt.ts    composición del prompt desde la receta
+  client.ts     llamada al proveedor con el esquema derivado (maxRetries: 0, ver más abajo)
+  providers.ts  registro de proveedor → cómo construir su LanguageModel, por `provider` declarado
+  chain.ts      diagnóstico de la cadena (créditos utilizables, punto único de fallo) y su recorrido
+  retry.ts      clasificación de errores y política de reintento por clase
+  links.ts      único punto que valida un enlace de la salida contra el conjunto de entrada
+  synthesize.ts única capacidad de "producir un informe validado" (R10, RF-F06)
+  prompt.ts     composición del prompt desde la receta, con el delimitador blindado
 ```
 
 Es la única capa que habla con un modelo. Si otra carpeta importa el SDK, hay un problema de
@@ -86,6 +89,37 @@ Al ejecutar:
 - **Temperatura baja.** Esto no es escritura creativa: es síntesis con estructura fija.
 - **Límite de tokens de salida acotado** y coherente con la cardinalidad máxima de las secciones.
 - **Tope de elementos de entrada** aplicado antes de llamar, nunca después.
+- **`maxRetries: 0` en la llamada al SDK (`client.ts`), a propósito.** Es una sola capa de
+  reintento, la nuestra (`retry.ts`), la que ADR-009 describe. El reintento por defecto del SDK no
+  distingue un 401 permanente de un 503 pasajero; dos capas juntas reintentarían lo que la de fuera
+  se niega a reintentar. No subas este número dentro de seis meses sin releer el ADR-009.
+
+## El delimitador del prompt no se puede cerrar desde fuera
+
+Cada elemento aporta cuatro campos de terceros: `title`, `url`, `source`, `summary`. Cualquiera de
+los cuatro puede contener `</elementos-no-confiables>` (o la apertura, con o sin atributos) tratando
+de escribir fuera del bloque no confiable. `prompt.ts` neutraliza esa etiqueta en los cuatro campos,
+en el único punto que los renderiza (`renderItem`): sustituye los ángulos por caracteres que no
+forman una etiqueta real, sin borrar el texto. El invariante que el test comprueba sobre el prompt
+compuesto entero: exactamente una apertura y un cierre reales, los que añade el propio código.
+
+## La cadena de proveedores, en código
+
+- `providers.ts` es el registro: nombre de proveedor declarado en la receta → cómo construir su
+  `LanguageModel`. Dos entradas de fábrica, `google` y `openai-compatible`. Se elige por el nombre,
+  nunca inspeccionando la URL o el identificador de modelo (D-03, ADR-012).
+- `chain.ts` expone dos funciones: `diagnoseChain` (sin red, para `validate`/`doctor` en fase 4) y
+  `runChain` (recorre la cadena de verdad, usada solo por `synthesize()`).
+- El conjunto de marcadores de posición que `RF-D05` rechaza vive en `chain.ts`
+  (`PLACEHOLDER_CREDENTIALS`) y está documentado en `docs/05-seguridad-legal.md`: son el mismo
+  texto, y si uno cambia sin el otro es el defecto D-14.
+- **Un eslabón `openai-compatible` puede declarar `reasoningModel: true`** (y opcionalmente
+  `reasoningEffort`) cuando ese modelo concreto exige la convención de llamada de los modelos de
+  razonamiento de OpenAI (`max_completion_tokens` en vez de `max_tokens`, sin `temperature` propia).
+  `providers.ts` lo traduce con `transformRequestBody`, activado solo por lo que la receta declara,
+  nunca por inspeccionar el identificador del modelo (D-03). Verificado con red real contra
+  `gpt-5.6-luna` en la fase 3: sin esto, la API rechaza la llamada tres veces distintas (ver
+  `docs/bitacora.md`, 2026-08-09).
 
 ---
 

@@ -1,6 +1,9 @@
+import { defaultProviderRegistry, type ProviderRegistry } from '../model/providers.ts';
 import type { ReaderRegistry } from '../sources/registry.ts';
 import { defaultRegistry } from '../sources/registry.ts';
-import type { ValidationIssue } from './types.ts';
+import type { ProviderSpec, ReasoningEffort, ValidationIssue } from './types.ts';
+
+const REASONING_EFFORT_VALUES: readonly ReasoningEffort[] = ['minimal', 'low', 'medium', 'high'];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -10,15 +13,18 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0;
 }
 
-function defaultHasSecret(name: string): boolean {
-  return Boolean(process.env[name]);
+function defaultSecret(name: string): string | undefined {
+  return process.env[name];
 }
 
 export interface ValidateRecipeOptions {
-  /** Inyectado para poder probar RF-B03 sin depender de verdad del entorno (R3, R13). */
-  readonly hasSecret?: (name: string) => boolean;
+  /** Inyectado para poder probar sin depender de verdad del entorno (R3, R13). La presencia de una
+   * credencial se deriva de esto, nunca de una segunda pregunta aparte. */
+  readonly secret?: (name: string) => string | undefined;
   /** Inyectado para poder probar con lectores que no son de fábrica, sin red (R13). */
   readonly registry?: ReaderRegistry;
+  /** Inyectado para poder probar con proveedores de modelo que no son de fábrica, sin red (R13). */
+  readonly providerRegistry?: ProviderRegistry;
 }
 
 function validateSourceFields(
@@ -66,7 +72,7 @@ function validateSources(
   raw: unknown,
   issues: ValidationIssue[],
   registry: ReaderRegistry,
-  hasSecret: (name: string) => boolean,
+  secret: (name: string) => string | undefined,
 ): void {
   if (!Array.isArray(raw)) {
     issues.push({ campo: 'sources', motivo: 'debe ser una lista de fuentes' });
@@ -121,7 +127,7 @@ function validateSources(
     }
 
     for (const secretName of reader.requiredSecrets) {
-      if (!hasSecret(secretName)) {
+      if (secret(secretName) === undefined) {
         issues.push({
           campo: path,
           motivo: `la fuente "${label}" de tipo "${type}" exige la credencial "${secretName}", ausente en el entorno`,
@@ -187,10 +193,149 @@ function validateCaps(raw: unknown, issues: ValidationIssue[]): void {
   }
 }
 
+function validateProviderSpec(
+  raw: unknown,
+  path: string,
+  providerRegistry: ProviderRegistry,
+  issues: ValidationIssue[],
+): ProviderSpec | undefined {
+  if (!isRecord(raw)) {
+    issues.push({ campo: path, motivo: 'el eslabón de la cadena debe ser un objeto' });
+    return undefined;
+  }
+
+  const { provider, id, apiKeyEnv, baseUrl, reasoningModel, reasoningEffort } = raw;
+  let ok = true;
+
+  if (!isNonEmptyString(provider)) {
+    issues.push({ campo: `${path}.provider`, motivo: 'falta el proveedor de modelo' });
+    ok = false;
+  } else if (!providerRegistry.has(provider)) {
+    issues.push({
+      campo: `${path}.provider`,
+      motivo: `proveedor de modelo desconocido "${provider}"`,
+    });
+    ok = false;
+  }
+
+  if (!isNonEmptyString(id)) {
+    issues.push({ campo: `${path}.id`, motivo: 'falta el identificador de modelo' });
+    ok = false;
+  }
+
+  if (apiKeyEnv !== undefined && !isNonEmptyString(apiKeyEnv)) {
+    issues.push({
+      campo: `${path}.apiKeyEnv`,
+      motivo: 'si se declara, "apiKeyEnv" debe ser el nombre de una variable de entorno, en texto',
+    });
+    ok = false;
+  }
+
+  if (provider === 'openai-compatible' && !isNonEmptyString(baseUrl)) {
+    issues.push({
+      campo: `${path}.baseUrl`,
+      motivo: 'el proveedor "openai-compatible" exige "baseUrl"',
+    });
+    ok = false;
+  } else if (baseUrl !== undefined && !isNonEmptyString(baseUrl)) {
+    issues.push({ campo: `${path}.baseUrl`, motivo: 'si se declara, "baseUrl" debe ser texto' });
+    ok = false;
+  }
+
+  if (reasoningModel !== undefined && typeof reasoningModel !== 'boolean') {
+    issues.push({
+      campo: `${path}.reasoningModel`,
+      motivo: 'si se declara, "reasoningModel" debe ser verdadero o falso',
+    });
+    ok = false;
+  }
+
+  if (
+    reasoningEffort !== undefined &&
+    !REASONING_EFFORT_VALUES.includes(reasoningEffort as ReasoningEffort)
+  ) {
+    issues.push({
+      campo: `${path}.reasoningEffort`,
+      motivo: `si se declara, "reasoningEffort" debe ser uno de: ${REASONING_EFFORT_VALUES.join(', ')}`,
+    });
+    ok = false;
+  }
+
+  if (!ok) {
+    return undefined;
+  }
+
+  const spec: { -readonly [K in keyof ProviderSpec]: ProviderSpec[K] } = {
+    provider: provider as string,
+    id: id as string,
+  };
+  if (apiKeyEnv !== undefined) spec.apiKeyEnv = apiKeyEnv as string;
+  if (baseUrl !== undefined) spec.baseUrl = baseUrl as string;
+  if (reasoningModel !== undefined) spec.reasoningModel = reasoningModel as boolean;
+  if (reasoningEffort !== undefined) spec.reasoningEffort = reasoningEffort as ReasoningEffort;
+  return spec;
+}
+
 /**
- * Valida los campos de `recipe.yaml`: idioma, temas, proveedor de modelo (fase 1), y fuentes,
- * ventana, pesos de puntuación y topes (fase 2). Devuelve todos los problemas encontrados, no
- * aborta en el primero (RF-A05).
+ * Valida `model` (el principal) y `model.fallbacks` (la cadena, opcional): cada eslabón exige
+ * `provider` registrado e `id`, `openai-compatible` exige además `baseUrl`, y ningún eslabón puede
+ * repetir el mismo proveedor con el mismo modelo, ni siquiera contra el principal (RF-A05).
+ */
+function validateModel(
+  raw: unknown,
+  issues: ValidationIssue[],
+  providerRegistry: ProviderRegistry,
+): void {
+  if (!isRecord(raw)) {
+    issues.push({ campo: 'model', motivo: 'falta la declaración del proveedor de modelo' });
+    return;
+  }
+
+  const principal = validateProviderSpec(raw, 'model', providerRegistry, issues);
+
+  if (raw.fallbacks === undefined) {
+    return;
+  }
+  if (!Array.isArray(raw.fallbacks)) {
+    issues.push({
+      campo: 'model.fallbacks',
+      motivo: 'si se declara, debe ser una lista de eslabones',
+    });
+    return;
+  }
+
+  const seen = new Map<string, number>();
+  if (principal) {
+    seen.set(`${principal.provider}::${principal.id}`, -1);
+  }
+
+  raw.fallbacks.forEach((rawFallback, index) => {
+    const path = `model.fallbacks[${index}]`;
+    const spec = validateProviderSpec(rawFallback, path, providerRegistry, issues);
+    if (!spec) {
+      return;
+    }
+
+    const key = `${spec.provider}::${spec.id}`;
+    const firstIndex = seen.get(key);
+    if (firstIndex !== undefined) {
+      issues.push({
+        campo: path,
+        motivo:
+          firstIndex === -1
+            ? `el eslabón "${spec.provider}/${spec.id}" repite el proveedor principal`
+            : `el eslabón "${spec.provider}/${spec.id}" ya está declarado en model.fallbacks[${firstIndex}]`,
+      });
+      return;
+    }
+    seen.set(key, index);
+  });
+}
+
+/**
+ * Valida los campos de `recipe.yaml`: idioma, temas, cadena de proveedores de modelo (fase 1 y 3),
+ * y fuentes, ventana, pesos de puntuación y topes (fase 2). Devuelve todos los problemas
+ * encontrados, no aborta en el primero (RF-A05).
  */
 export function validateRecipeFields(
   raw: unknown,
@@ -201,7 +346,8 @@ export function validateRecipeFields(
   }
 
   const registry = options.registry ?? defaultRegistry;
-  const hasSecret = options.hasSecret ?? defaultHasSecret;
+  const providerRegistry = options.providerRegistry ?? defaultProviderRegistry;
+  const secret = options.secret ?? defaultSecret;
   const issues: ValidationIssue[] = [];
 
   if (!isNonEmptyString(raw.language)) {
@@ -219,27 +365,8 @@ export function validateRecipeFields(
     });
   }
 
-  if (!isRecord(raw.model)) {
-    issues.push({
-      campo: 'model',
-      motivo: 'falta la declaración del proveedor de modelo',
-    });
-  } else {
-    if (!isNonEmptyString(raw.model.provider)) {
-      issues.push({
-        campo: 'model.provider',
-        motivo: 'falta el proveedor de modelo',
-      });
-    }
-    if (!isNonEmptyString(raw.model.id)) {
-      issues.push({
-        campo: 'model.id',
-        motivo: 'falta el identificador de modelo',
-      });
-    }
-  }
-
-  validateSources(raw.sources, issues, registry, hasSecret);
+  validateModel(raw.model, issues, providerRegistry);
+  validateSources(raw.sources, issues, registry, secret);
   validateWindow(raw.window, issues);
   validateScoring(raw.scoring, issues);
   validateCaps(raw.caps, issues);

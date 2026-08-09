@@ -27,9 +27,27 @@ export interface Persona {
   readonly text: string;
 }
 
-export interface ModelConfig {
+/** Un eslabón de la cadena de proveedores, declarado en la receta. `apiKeyEnv` es el NOMBRE de la
+ * variable de entorno, nunca el valor (R3): ausente ⇒ la variable por defecto del proveedor. */
+export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high';
+
+export interface ProviderSpec {
   readonly provider: string;
   readonly id: string;
+  readonly apiKeyEnv?: string;
+  /** Solo `openai-compatible`: el endpoint del proveedor concreto. */
+  readonly baseUrl?: string;
+  /** Solo `openai-compatible`: este modelo exige la convención de llamada de los modelos de
+   * razonamiento (`max_completion_tokens` en vez de `max_tokens`, sin `temperature` propia). No se
+   * detecta por el identificador (D-03): quien declara el eslabón lo sabe y lo dice. */
+  readonly reasoningModel?: boolean;
+  /** Solo si `reasoningModel` es `true`: esfuerzo de razonamiento a pedir. */
+  readonly reasoningEffort?: ReasoningEffort;
+}
+
+/** `provider` e `id` siguen siendo el principal (fase 1); `fallbacks` es la cadena, en orden. */
+export interface ModelConfig extends ProviderSpec {
+  readonly fallbacks?: readonly ProviderSpec[];
 }
 
 /**

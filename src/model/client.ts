@@ -27,22 +27,12 @@ export async function generateReport(options: GenerateReportOptions): Promise<un
     output: Output.object({ schema }),
     temperature: options.temperature ?? DEFAULT_TEMPERATURE,
     maxOutputTokens: options.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+    // Una sola capa de reintento: la nuestra (src/model/retry.ts, ADR-009). El reintento por
+    // defecto del SDK no distingue un 401 permanente de un 503 pasajero, y las dos capas juntas
+    // reintentarían el error que la de fuera se niega a reintentar. No lo "arregles" subiendo este
+    // número: es deliberado.
+    maxRetries: 0,
   });
 
   return result.output;
-}
-
-const GOOGLE_API_KEY_ENV_VAR = 'GOOGLE_GENERATIVE_AI_API_KEY';
-
-/**
- * Construye el modelo de Google para uso real. La credencial se lee solo del entorno (R3): si
- * falta, falla en voz alta aquí, antes de componer ningún prompt.
- */
-export async function googleModel(modelId: string): Promise<LanguageModel> {
-  if (!process.env[GOOGLE_API_KEY_ENV_VAR]) {
-    throw new Error(`falta la variable de entorno ${GOOGLE_API_KEY_ENV_VAR}`);
-  }
-
-  const { google } = await import('@ai-sdk/google');
-  return google(modelId);
 }

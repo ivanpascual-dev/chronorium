@@ -5,6 +5,15 @@ topics:
 model:
   provider: google
   id: gemini-3.6-flash
+  # Una receta de fábrica funciona con esta única credencial (RF-B04, RF-H04). Un segundo
+  # proveedor quita el punto único de fallo (ADR-009) y se declara así, sin tocar el código:
+  # fallbacks:
+  #   - provider: openai-compatible
+  #     id: gpt-5.6-luna
+  #     apiKeyEnv: OPENAI_API_KEY     # el NOMBRE de la variable, nunca el valor (R3)
+  #     baseUrl: https://api.openai.com/v1
+  #     reasoningModel: true          # exige max_completion_tokens y no admite temperature propia
+  #     reasoningEffort: medium
 
 # Fuentes públicas reales, sin credencial más allá de la del modelo (RF-B04).
 sources:

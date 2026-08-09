@@ -75,6 +75,17 @@ jobs:
           PERSONAL_TERMS: ${{ secrets.PERSONAL_TERMS }}
         run: pnpm run check:sin-datos-personales
 
+      - name: Bateria de ataques
+        # RF-E07. Puerta obligatoria antes de publicar: la tabla de docs/05-seguridad-legal.md,
+        # ejecutable como comando. Sin red y sin credenciales (R13): fuentes guardadas, modelo
+        # simulado. Guarda de arranque: se activa sola en cuanto el script exista en package.json.
+        run: |
+          if pnpm run | grep -q 'bateria'; then
+            pnpm run bateria
+          else
+            echo "bateria no implementada todavia."
+          fi
+
       - name: La receta de ejemplo sigue viva
         # RF-H05. Ejecuta el pipeline entero con modelo simulado y fuentes guardadas.
         # Al vivir los datos reales en otro repositorio, esto es lo unico que demuestra que la

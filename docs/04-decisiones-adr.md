@@ -510,3 +510,63 @@ envoltura del esquema con `jsonSchema()` (ADR-005) no cambia, solo cambia la fun
 - El resultado se lee en `result.output`, no en `result.object`.
 - El doble de proveedor para tests (RF-H03) se construye con `MockLanguageModelV4` de `ai/test`.
 - Si una versión futura del SDK elimina `generateObject`, este proyecto no se ve afectado.
+
+---
+
+## ADR-018 · El segundo proveedor de ejemplo es `gpt-5.6-luna`, no Groq, y `ProviderSpec` declara la convención de llamada del eslabón
+
+**Estado:** aceptado
+
+**Contexto.** El plan de la fase 3 fijaba `@ai-sdk/openai-compatible` como mecanismo genérico de
+segundo eslabón (ADR de la propia fase 3, no reescrito aquí) y sugería DeepSeek, Groq, OpenRouter o un
+modelo local como ejemplo. T0 verificó que DeepSeek no ofrece `json_schema` estricto y eligió Groq
+(`openai/gpt-oss-20b`), que sí lo documenta. Ese cambio ya quedó escrito en la bitácora del
+2026-08-08, dentro de lo que el propio plan preveía: "si no aguanta, se para y se cambia a un
+proveedor concreto".
+
+Lo que el plan no preveía es lo que salió de T14, con red y credenciales reales, el 2026-08-09:
+
+1. **Groq rechazó el informe completo.** Con `caps.maxItems: 60` (~22.000 tokens de entrada), la
+   petición choca contra el límite gratuito de 8.000 tokens por minuto de Groq. No es un fallo de
+   diseño, es una cuota que ningún doble (`MockLanguageModelV4`) puede reproducir, porque depende del
+   tamaño real del informe, no de la forma de la llamada.
+2. **`gpt-5.6-luna` (OpenAI) exige una convención de llamada distinta.** Sus modelos de razonamiento
+   rechazan `max_tokens` (piden `max_completion_tokens`) y cualquier `temperature` fuera de la suya
+   por defecto. El conector genérico `openai-compatible` no lo sabe de fábrica.
+
+**Opciones consideradas para el segundo punto.**
+
+1. Detectar la convención de razonamiento inspeccionando el identificador del modelo (`spec.id`).
+   Descartada: es exactamente D-03/ADR-012, elegir comportamiento por inspección de un valor en vez
+   de por lo declarado en la receta. Un modelo renombrado o uno nuevo de la misma familia rompería la
+   detección en silencio.
+2. **Declarar la convención en la propia receta**, como dos campos opcionales de `ProviderSpec`:
+   `reasoningModel: boolean` y `reasoningEffort: 'minimal' | 'low' | 'medium' | 'high'`.
+
+**Decisión.** Opción 2, y `gpt-5.6-luna` en razonamiento medio como segundo proveedor de la receta de
+ejemplo (comentario, sin declarar por defecto, RF-B04) y de la fixture biotech.
+
+**Por qué el modelo.** El dueño comparó un informe real de cada proveedor tras corregir el fallo de
+`supportsStructuredOutputs` (ver bitácora): coste menor de un centavo por informe en ambos, y calidad
+igual o mejor en Luna sobre la única muestra comparada (más elementos cubiertos, acciones más
+concretas, mejor alineación con la persona). No es una medición estadística, es una decisión de
+producto tomada con datos reales en lugar de con la lista de nombres que traía el plan.
+
+**Por qué los dos campos y no una tabla interna en `providers.ts`.** La regla que ya fija ADR-012 es
+general: el comportamiento se elige por lo que la receta declara, nunca por inspeccionar un
+identificador. Una tabla `id → convención de llamada` dentro de `src/` sería exactamente la clase de
+conocimiento de dominio (qué modelos concretos existen y cómo se llaman) que la constitución prohíbe
+en el motor. Los dos campos son opcionales y aditivos: `ModelConfig`/`ProviderSpec` no rompen ninguna
+receta de las fases 1 y 2.
+
+**Consecuencias.**
+
+- `providers.ts` traduce `reasoningModel`/`reasoningEffort` a `max_completion_tokens` y a la ausencia
+  de `temperature` mediante `transformRequestBody`, solo cuando el eslabón lo declara.
+- `recipe/validate.ts` exige `reasoningEffort` ausente si `reasoningModel` no es `true`, y uno de los
+  cuatro valores del enum si lo es.
+- Groq no queda en ningún fichero de producción. Sigue siendo válido como opción de cadena para quien
+  lo declare, pero deja de ser el ejemplo documentado.
+- Si aparece un tercer proveedor con su propia convención de llamada (no razonamiento), el patrón es
+  el mismo: un campo opcional más en `ProviderSpec`, declarado por quien escribe la receta, nunca
+  detectado.

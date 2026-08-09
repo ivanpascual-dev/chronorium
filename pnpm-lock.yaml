@@ -210,6 +210,9 @@ importers:
       '@ai-sdk/google':
         specifier: ^4.0.37
         version: 4.0.37(zod@4.4.3)
+      '@ai-sdk/openai-compatible':
+        specifier: ^3.0.25
+        version: 3.0.25(zod@4.4.3)
       '@rgrove/parse-xml':
         specifier: ^4.2.3
         version: 4.2.3
@@ -246,6 +249,12 @@ packages:
 
   '@ai-sdk/google@4.0.37':
     resolution: {integrity: sha512-wtf81hl7lAy/cMREfwxeMRcfGl7WrSiZI5nTEDwHqH/dEWEM8lPQn13s9S97nbQn1DHNeyduljH4huCeILP/bw==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/openai-compatible@3.0.25':
+    resolution: {integrity: sha512-6NMHwYsjF8QQ8sKEnC6tt9w1z87Z0XwKgOGe1ZB48SwH+HvFEHsn8nCEvKML3MUwRtVu0mxRG08FTjXmew/ELA==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -668,6 +677,12 @@ snapshots:
       zod: 4.4.3
 
   '@ai-sdk/google@4.0.37(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.6
+      '@ai-sdk/provider-utils': 5.0.23(zod@4.4.3)
+      zod: 4.4.3
+
+  '@ai-sdk/openai-compatible@3.0.25(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 4.0.6
       '@ai-sdk/provider-utils': 5.0.23(zod@4.4.3)

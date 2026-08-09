@@ -5,6 +5,15 @@ topics:
 model:
   provider: google
   id: gemini-3.6-flash
+  # Cadena de dos proveedores (fase 3), por el mismo motivo por el que sus secciones son
+  # distintas de las de recipes/example: si las dos recetas se parecen, no prueban nada.
+  fallbacks:
+    - provider: openai-compatible
+      id: gpt-5.6-luna
+      apiKeyEnv: OPENAI_API_KEY
+      baseUrl: https://api.openai.com/v1
+      reasoningModel: true
+      reasoningEffort: medium
 
 # Fuentes de forma distinta a las de recipes/example (mismo motivo que sus secciones distintas):
 # aquí no hay ni repo-search ni repo-releases (no hay "lanzamientos de stack" en biotecnología), y
