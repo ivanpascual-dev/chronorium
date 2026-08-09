@@ -26,6 +26,7 @@
   "packageManager": "pnpm@11.20.0",
   "dependencies": {
     "@ai-sdk/google": "^4.0.37",
+    "@ai-sdk/openai": "^4.0.36",
     "@ai-sdk/openai-compatible": "^3.0.25",
     "@rgrove/parse-xml": "^4.2.3",
     "ai": "^7.0.55",

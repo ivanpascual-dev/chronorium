@@ -513,7 +513,7 @@ envoltura del esquema con `jsonSchema()` (ADR-005) no cambia, solo cambia la fun
 
 ---
 
-## ADR-018 · El segundo proveedor de ejemplo es `gpt-5.6-luna`, no Groq, y `ProviderSpec` declara la convención de llamada del eslabón
+## ADR-018 · El segundo proveedor de ejemplo es `gpt-5.6-luna`, servido por el paquete oficial `@ai-sdk/openai`
 
 **Estado:** aceptado
 
@@ -532,19 +532,7 @@ Lo que el plan no preveía es lo que salió de T14, con red y credenciales reale
    tamaño real del informe, no de la forma de la llamada.
 2. **`gpt-5.6-luna` (OpenAI) exige una convención de llamada distinta.** Sus modelos de razonamiento
    rechazan `max_tokens` (piden `max_completion_tokens`) y cualquier `temperature` fuera de la suya
-   por defecto. El conector genérico `openai-compatible` no lo sabe de fábrica.
-
-**Opciones consideradas para el segundo punto.**
-
-1. Detectar la convención de razonamiento inspeccionando el identificador del modelo (`spec.id`).
-   Descartada: es exactamente D-03/ADR-012, elegir comportamiento por inspección de un valor en vez
-   de por lo declarado en la receta. Un modelo renombrado o uno nuevo de la misma familia rompería la
-   detección en silencio.
-2. **Declarar la convención en la propia receta**, como dos campos opcionales de `ProviderSpec`:
-   `reasoningModel: boolean` y `reasoningEffort: 'minimal' | 'low' | 'medium' | 'high'`.
-
-**Decisión.** Opción 2, y `gpt-5.6-luna` en razonamiento medio como segundo proveedor de la receta de
-ejemplo (comentario, sin declarar por defecto, RF-B04) y de la fixture biotech.
+   por defecto.
 
 **Por qué el modelo.** El dueño comparó un informe real de cada proveedor tras corregir el fallo de
 `supportsStructuredOutputs` (ver bitácora): coste menor de un centavo por informe en ambos, y calidad
@@ -552,21 +540,69 @@ igual o mejor en Luna sobre la única muestra comparada (más elementos cubierto
 concretas, mejor alineación con la persona). No es una medición estadística, es una decisión de
 producto tomada con datos reales en lugar de con la lista de nombres que traía el plan.
 
-**Por qué los dos campos y no una tabla interna en `providers.ts`.** La regla que ya fija ADR-012 es
-general: el comportamiento se elige por lo que la receta declara, nunca por inspeccionar un
-identificador. Una tabla `id → convención de llamada` dentro de `src/` sería exactamente la clase de
-conocimiento de dominio (qué modelos concretos existen y cómo se llaman) que la constitución prohíbe
-en el motor. Los dos campos son opcionales y aditivos: `ModelConfig`/`ProviderSpec` no rompen ninguna
-receta de las fases 1 y 2.
+**Primera implementación, y por qué se corrigió antes de cerrar la fase.** La primera versión servía
+`gpt-5.6-luna` a través del conector genérico `openai-compatible`, con dos campos nuevos en
+`ProviderSpec` (`reasoningModel: boolean`, `reasoningEffort`) y una función,
+`reasoningModelBody(body, reasoningEffort)`, que traducía a mano `max_tokens`→`max_completion_tokens`
+y quitaba `temperature` antes de mandar la petición. Funcionaba y estaba probada (7 tests), pero era
+mantener por cuenta propia una traducción de parámetros que **el paquete oficial `@ai-sdk/openai` ya
+resuelve**: verificado contra su código fuente (no solo su documentación) que la Responses API
+(`openai(modelId).responses`) traduce `max_tokens` automáticamente y omite `temperature` para modelos
+de razonamiento salvo que se pida `reasoningEffort: 'none'`, exactamente el comportamiento que el
+proyecto reimplementaba. Revisado esto antes de comitear nada de la fase, se sustituyó por la
+dependencia oficial.
+
+**Opciones para declarar el esfuerzo de razonamiento.**
+
+1. Detectar la convención de razonamiento inspeccionando el identificador del modelo (`spec.id`).
+   Descartada: es exactamente D-03/ADR-012, elegir comportamiento por inspección de un valor en vez
+   de por lo declarado en la receta.
+2. **Un solo campo opcional, `reasoningEffort`, en `ProviderSpec`**, con efecto cuando
+   `provider: 'openai'`. El resto de la convención de llamada la resuelve el paquete oficial sin que
+   el proyecto lo declare.
+
+**Decisión.** Opción 2. `providers.ts` gana una tercera entrada de fábrica, `openai`
+(`@ai-sdk/openai`, `defaultApiKeyEnv: 'OPENAI_API_KEY'`), que construye el modelo con
+`createOpenAI({ apiKey }).responses(spec.id)`. Como `reasoningEffort` solo tiene efecto pasado como
+`providerOptions` **en la llamada** (`generateText`), no al construir el modelo, y el contrato
+`ProviderFactory.create(spec, apiKey): Promise<LanguageModel>` no expone ningún sitio para eso sin que
+`client.ts`/`chain.ts` tuvieran que conocer detalles de proveedor, se usa `wrapLanguageModel` +
+`defaultSettingsMiddleware` (ambos de `ai`, ya dependencia del proyecto) para fijarlo como valor por
+defecto de esa instancia de modelo. Es el mecanismo que la propia documentación de AI SDK describe
+para este caso exacto.
+
+`openai-compatible` **no se retira**: se queda registrada como vía genérica declarada para quien
+prefiera otro proveedor remoto compatible (DeepSeek, Groq, OpenRouter) o un modelo local, sin que el
+código lo sepa. Deja de ser el mecanismo del ejemplo documentado, pero sigue siendo una opción válida
+de la cadena.
+
+**Extensión: el mismo campo también traduce a Gemini.** Verificado contra ai-sdk.dev: Gemini 3 y
+posteriores aceptan `providerOptions.google.thinkingConfig.thinkingLevel`, con los mismos cuatro
+valores (`minimal | low | medium | high`) que ya tenía `reasoningEffort` (Gemini 2.5 usaría
+`thinkingBudget` en tokens en su lugar; no aplica a `gemini-3.6-flash`, el modelo que declara este
+proyecto). En vez de inventar un segundo campo (`thinkingLevel`) para decir lo mismo con otro nombre,
+`reasoningEffort` pasa a interpretarse también con `provider: 'google'`: es el mismo campo de dominio
+("cuánto debe razonar el modelo"), traducido distinto por proveedor en `providers.ts`
+(`openAiReasoningOptions`, `googleReasoningOptions`), sin que quien escribe la receta tenga que saber
+el nombre que le da cada API.
 
 **Consecuencias.**
 
-- `providers.ts` traduce `reasoningModel`/`reasoningEffort` a `max_completion_tokens` y a la ausencia
-  de `temperature` mediante `transformRequestBody`, solo cuando el eslabón lo declara.
-- `recipe/validate.ts` exige `reasoningEffort` ausente si `reasoningModel` no es `true`, y uno de los
-  cuatro valores del enum si lo es.
-- Groq no queda en ningún fichero de producción. Sigue siendo válido como opción de cadena para quien
-  lo declare, pero deja de ser el ejemplo documentado.
-- Si aparece un tercer proveedor con su propia convención de llamada (no razonamiento), el patrón es
-  el mismo: un campo opcional más en `ProviderSpec`, declarado por quien escribe la receta, nunca
-  detectado.
+- `ProviderSpec` pierde `reasoningModel: boolean` (ya no hace falta: `reasoningEffort` expresa la
+  intención por sí solo, y solo tiene efecto con `provider: 'openai'` o `'google'`). Se queda con
+  `reasoningEffort?: ReasoningEffort`.
+- Desaparece `reasoningModelBody` y sus 4 tests de traducción manual; los sustituyen tests que
+  confirman que las tres entradas del registro (`google`, `openai`, `openai-compatible`) siguen
+  eligiéndose solo por nombre (D-03), y que `openAiReasoningOptions`/`googleReasoningOptions` traducen
+  el mismo valor a la forma exacta que cada API espera.
+- `recipes/example` (comentario, en el eslabón principal `google` y en el de respaldo `openai`) y la
+  fixture biotech (activo, con valores distintos en cada eslabón a propósito) declaran
+  `reasoningEffort`. Ninguno necesita `baseUrl` salvo `openai-compatible`.
+- Groq no queda en ningún fichero de producción.
+- Si `client.ts` sigue mandando `temperature` en la llamada para un modelo de razonamiento con
+  `reasoningEffort` distinto de `'none'`, el SDK de OpenAI ya no lo rechaza: lo omite y añade un aviso
+  de tipo `unsupported` en `result.warnings`. No es un error, es el mismo comportamiento que antes
+  forzaba `reasoningModelBody` a mano; queda anotado por si algún día se decide registrar esos avisos.
+- `recipe/validate.ts` valida el tipo de `reasoningEffort` para cualquier `provider`, sin restringirlo
+  a `openai`/`google` (mismo criterio que ya usa con `baseUrl` en ese validador): si se declara en
+  `openai-compatible`, valida pero no tiene efecto, porque ese conector no lo interpreta.

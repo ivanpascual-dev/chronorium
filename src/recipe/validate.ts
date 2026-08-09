@@ -204,7 +204,7 @@ function validateProviderSpec(
     return undefined;
   }
 
-  const { provider, id, apiKeyEnv, baseUrl, reasoningModel, reasoningEffort } = raw;
+  const { provider, id, apiKeyEnv, baseUrl, reasoningEffort } = raw;
   let ok = true;
 
   if (!isNonEmptyString(provider)) {
@@ -242,14 +242,6 @@ function validateProviderSpec(
     ok = false;
   }
 
-  if (reasoningModel !== undefined && typeof reasoningModel !== 'boolean') {
-    issues.push({
-      campo: `${path}.reasoningModel`,
-      motivo: 'si se declara, "reasoningModel" debe ser verdadero o falso',
-    });
-    ok = false;
-  }
-
   if (
     reasoningEffort !== undefined &&
     !REASONING_EFFORT_VALUES.includes(reasoningEffort as ReasoningEffort)
@@ -271,7 +263,6 @@ function validateProviderSpec(
   };
   if (apiKeyEnv !== undefined) spec.apiKeyEnv = apiKeyEnv as string;
   if (baseUrl !== undefined) spec.baseUrl = baseUrl as string;
-  if (reasoningModel !== undefined) spec.reasoningModel = reasoningModel as boolean;
   if (reasoningEffort !== undefined) spec.reasoningEffort = reasoningEffort as ReasoningEffort;
   return spec;
 }

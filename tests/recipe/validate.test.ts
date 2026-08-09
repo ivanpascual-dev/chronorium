@@ -242,21 +242,13 @@ test('un eslabón "openai-compatible" con baseUrl no produce error', () => {
   assert.deepEqual(issues, []);
 });
 
-test('un eslabón "openai-compatible" con reasoningModel y reasoningEffort válidos no produce error', () => {
+test('un eslabón "openai" no exige baseUrl, a diferencia de "openai-compatible"', () => {
   const issues = validateRecipeFields({
     ...validBase,
     model: {
       provider: 'google',
       id: 'gemini-test',
-      fallbacks: [
-        {
-          provider: 'openai-compatible',
-          id: 'gpt-5.6-luna',
-          baseUrl: 'https://api.openai.com/v1',
-          reasoningModel: true,
-          reasoningEffort: 'medium',
-        },
-      ],
+      fallbacks: [{ provider: 'openai', id: 'gpt-5.6-luna' }],
     },
     sources: [],
     window: { days: 30 },
@@ -267,20 +259,13 @@ test('un eslabón "openai-compatible" con reasoningModel y reasoningEffort váli
   assert.deepEqual(issues, []);
 });
 
-test('"reasoningModel" que no es verdadero o falso produce un error que nombra el campo', () => {
+test('un eslabón "openai" con reasoningEffort válido no produce error', () => {
   const issues = validateRecipeFields({
     ...validBase,
     model: {
       provider: 'google',
       id: 'gemini-test',
-      fallbacks: [
-        {
-          provider: 'openai-compatible',
-          id: 'gpt-5.6-luna',
-          baseUrl: 'https://api.openai.com/v1',
-          reasoningModel: 'sí',
-        },
-      ],
+      fallbacks: [{ provider: 'openai', id: 'gpt-5.6-luna', reasoningEffort: 'medium' }],
     },
     sources: [],
     window: { days: 30 },
@@ -288,7 +273,7 @@ test('"reasoningModel" que no es verdadero o falso produce un error que nombra e
     caps: { maxItems: 10, perSourceMaxPercent: 50 },
   });
 
-  assert.ok(campos(issues).includes('model.fallbacks[0].reasoningModel'));
+  assert.deepEqual(issues, []);
 });
 
 test('"reasoningEffort" fuera del conjunto válido produce un error que nombra el campo', () => {
@@ -297,15 +282,7 @@ test('"reasoningEffort" fuera del conjunto válido produce un error que nombra e
     model: {
       provider: 'google',
       id: 'gemini-test',
-      fallbacks: [
-        {
-          provider: 'openai-compatible',
-          id: 'gpt-5.6-luna',
-          baseUrl: 'https://api.openai.com/v1',
-          reasoningModel: true,
-          reasoningEffort: 'maximo',
-        },
-      ],
+      fallbacks: [{ provider: 'openai', id: 'gpt-5.6-luna', reasoningEffort: 'maximo' }],
     },
     sources: [],
     window: { days: 30 },

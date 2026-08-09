@@ -1,33 +1,62 @@
-import type { LanguageModel } from 'ai';
-import type { ProviderSpec } from '../recipe/types.ts';
+import { defaultSettingsMiddleware, type LanguageModel, wrapLanguageModel } from 'ai';
+import type { ProviderSpec, ReasoningEffort } from '../recipe/types.ts';
 
 export interface ProviderFactory {
   readonly defaultApiKeyEnv: string;
   create(spec: ProviderSpec, apiKey: string): Promise<LanguageModel>;
 }
 
+/** Cómo traduce cada proveedor el mismo `reasoningEffort` declarado en la receta a su propia
+ * convención (verificado contra ai-sdk.dev): pura, sin red, para poder probarla directamente. */
+export function openAiReasoningOptions(reasoningEffort: ReasoningEffort) {
+  return { openai: { reasoningEffort } };
+}
+
+/** Gemini 3 y posteriores llaman a esto "nivel de pensamiento", no "esfuerzo de razonamiento", pero
+ * son los mismos cuatro valores (`minimal | low | medium | high`): un mismo campo de dominio,
+ * traducido distinto por proveedor (Gemini 2.5 usa `thinkingBudget` en tokens en su lugar; no
+ * aplica a los modelos de la familia Gemini 3 que declara este proyecto). */
+export function googleReasoningOptions(reasoningEffort: ReasoningEffort) {
+  return { google: { thinkingConfig: { thinkingLevel: reasoningEffort } } };
+}
+
 async function createGoogleModel(spec: ProviderSpec, apiKey: string): Promise<LanguageModel> {
   const { createGoogleGenerativeAI } = await import('@ai-sdk/google');
-  return createGoogleGenerativeAI({ apiKey })(spec.id);
+  const model = createGoogleGenerativeAI({ apiKey })(spec.id);
+
+  if (spec.reasoningEffort === undefined) {
+    return model;
+  }
+
+  return wrapLanguageModel({
+    model,
+    middleware: defaultSettingsMiddleware({
+      settings: { providerOptions: googleReasoningOptions(spec.reasoningEffort) },
+    }),
+  });
 }
 
 /**
- * La API de OpenAI para sus modelos de razonamiento (o1/o3/gpt-5.x vía `v1/chat/completions`)
- * rechaza `max_tokens` (exige `max_completion_tokens`) y cualquier `temperature` distinta de la
- * suya por defecto. El conector genérico `openai-compatible` no lo sabe, ni le corresponde saberlo
- * por inspección del identificador (D-03): se traduce aquí solo cuando la receta declara
- * `reasoningModel: true` en ese eslabón.
+ * Paquete oficial: la Responses API ya traduce `max_tokens`→`max_completion_tokens` y omite
+ * `temperature` para modelos de razonamiento por sí sola (verificado contra su código fuente,
+ * ver ADR-018). Solo hace falta declarar `reasoningEffort`, y solo se pasa como `providerOptions`
+ * en la llamada, nunca al construir el modelo: `defaultSettingsMiddleware` lo fija por defecto sin
+ * que `client.ts`/`chain.ts` tengan que conocer detalles de proveedor.
  */
-export function reasoningModelBody(
-  body: Record<string, unknown>,
-  reasoningEffort: ProviderSpec['reasoningEffort'],
-): Record<string, unknown> {
-  const { max_tokens, temperature: _temperature, ...rest } = body;
-  return {
-    ...rest,
-    ...(max_tokens !== undefined ? { max_completion_tokens: max_tokens } : {}),
-    ...(reasoningEffort !== undefined ? { reasoning_effort: reasoningEffort } : {}),
-  };
+async function createOpenAiModel(spec: ProviderSpec, apiKey: string): Promise<LanguageModel> {
+  const { createOpenAI } = await import('@ai-sdk/openai');
+  const model = createOpenAI({ apiKey }).responses(spec.id);
+
+  if (spec.reasoningEffort === undefined) {
+    return model;
+  }
+
+  return wrapLanguageModel({
+    model,
+    middleware: defaultSettingsMiddleware({
+      settings: { providerOptions: openAiReasoningOptions(spec.reasoningEffort) },
+    }),
+  });
 }
 
 async function createOpenAiCompatibleModel(
@@ -49,12 +78,6 @@ async function createOpenAiCompatibleModel(
     // que el T0 de la fase 3 verificó (ADR-009); sin activarla aquí, esa verificación no llegaba a
     // la llamada real.
     supportsStructuredOutputs: true,
-    ...(spec.reasoningModel === true
-      ? {
-          transformRequestBody: (body: Record<string, unknown>) =>
-            reasoningModelBody(body, spec.reasoningEffort),
-        }
-      : {}),
   })(spec.id);
 }
 
@@ -62,11 +85,14 @@ export type ProviderRegistry = ReadonlyMap<string, ProviderFactory>;
 
 const builtinProviders: ReadonlyMap<string, ProviderFactory> = new Map([
   ['google', { defaultApiKeyEnv: 'GOOGLE_GENERATIVE_AI_API_KEY', create: createGoogleModel }],
+  ['openai', { defaultApiKeyEnv: 'OPENAI_API_KEY', create: createOpenAiModel }],
   [
     'openai-compatible',
     { defaultApiKeyEnv: 'OPENAI_COMPATIBLE_API_KEY', create: createOpenAiCompatibleModel },
   ],
 ]);
 
-/** Los dos proveedores de fábrica, seleccionables solo por `provider` declarado (D-03, ADR-012). */
+/** Los tres proveedores de fábrica, seleccionables solo por `provider` declarado (D-03, ADR-012).
+ * `openai-compatible` se queda como vía genérica declarada para quien prefiera otro proveedor
+ * remoto compatible (DeepSeek, Groq, OpenRouter) o un modelo local, sin que el código lo sepa. */
 export const defaultProviderRegistry: ProviderRegistry = builtinProviders;

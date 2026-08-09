@@ -61,6 +61,49 @@ hacer: el código dice cómo quedó, pero no qué se intentó antes ni qué se d
 
 ## Entradas
 
+## 2026-08-09 · Fase 3 · Corrección post-cierre: `@ai-sdk/openai` en vez del parche sobre `openai-compatible`
+
+**Hecho.** Tras comitear el cierre de la fase 3 (T0-T15, con `guardarrailes` y `/verifier` ya
+pasados sobre ese estado), la revisión de cierre encontró que el segundo eslabón real
+(`gpt-5.6-luna`) se servía a través del conector genérico `openai-compatible` más código propio
+(`reasoningModel: boolean`, `reasoningEffort`, `transformRequestBody` en `src/model/providers.ts`)
+que traducía a mano `max_tokens`→`max_completion_tokens` y quitaba `temperature`. Verificado contra
+el código fuente del paquete oficial `@ai-sdk/openai` (auditado con `@dependency-audit`, versión
+`4.0.36`, cero dependencias transitivas nuevas: ya las arrastraban `@ai-sdk/google` y
+`@ai-sdk/openai-compatible`) que la Responses API (`openai(modelId).responses`) ya resuelve esa
+misma traducción de fábrica. Se sustituyó: `providers.ts` gana una tercera entrada de fábrica,
+`openai`, y pierde `reasoningModelBody`; `ProviderSpec` pierde `reasoningModel`, se queda con
+`reasoningEffort`, fijado con `wrapLanguageModel` + `defaultSettingsMiddleware` (de `ai`) porque solo
+tiene efecto en la llamada, no al construir el modelo. `openai-compatible` se queda registrada,
+documentada como vía genérica para quien declare DeepSeek, Groq, OpenRouter o un modelo local.
+`recipes/example` (comentario), la fixture biotech y `scripts/probe-fase3.ts` pasan a
+`provider: openai`. `ADR-018` se reescribió in situ (no se creó un ADR-019) porque nada de la versión
+anterior se había comiteado todavía: es la misma sesión, corrigiendo el mecanismo antes de dar la
+fase por cerrada de verdad.
+
+**Se desvió.** El cierre de la fase 3 se comiteó primero con el mecanismo antiguo (parche sobre
+`openai-compatible`), a petición explícita del dueño, para no mezclar en un solo commit "lo que
+`fiel-al-plan` y `guardarrailes` ya verificaron" con "la corrección posterior". El commit de la fase
+(`faf3380`) representa un estado real que pasó todas las puertas, aunque no sea el que queda en el
+árbol al terminar esta sesión.
+
+**Aprendido.**
+
+- `@ai-sdk/openai`, `@ai-sdk/google` y `@ai-sdk/openai-compatible` comparten los mismos dos paquetes
+  internos (`@ai-sdk/provider`, `@ai-sdk/provider-utils`): añadir el oficial no añade una rama nueva
+  al árbol de dependencias, solo sube dos paquetes ya presentes a la siguiente versión de parche. Es
+  el caso ideal para no dudar antes de instalar un SDK de proveedor oficial en vez de mantener un
+  parche propio sobre el genérico.
+- `defaultSettingsMiddleware` (de `ai`) es el mecanismo documentado para fijar `providerOptions` por
+  defecto en una instancia de modelo concreta, sin tocar el código que hace la llamada
+  (`generateText`). Resuelve exactamente el problema de "esta opción solo existe por llamada, pero mi
+  registro de proveedores solo construye el modelo una vez", sin romper el contrato
+  `ProviderFactory.create(spec, apiKey): Promise<LanguageModel>`.
+- Si `client.ts` manda `temperature` en una llamada a un modelo de razonamiento con `reasoningEffort`
+  distinto de `'none'`, la Responses API ya no la rechaza: la omite y añade un aviso
+  (`result.warnings`, tipo `unsupported`). Queda anotado, no se actúa: no hay ningún sitio hoy que
+  lea `result.warnings`, y no es tarea de esta corrección añadirlo.
+
 ## 2026-08-09 · Fase 3 · T14/T15 con red real: la cadena cambia de Groq a gpt-5.6-luna
 
 **Hecho.** Se ejecutó `pnpm run probe:fase3` con credenciales reales (T14), lo que sacó a la luz un

@@ -29,13 +29,12 @@ const OPENAI_KEY = 'OPENAI_API_KEY';
 // Segundo eslabón real (decisión del dueño tras comparar contra Groq): Groq es gratuito, pero su
 // capa gratuita revienta por tokens por minuto con un informe completo (8K TPM, ~22K tokens que
 // pide `recipes/example`). `gpt-5.6-luna` cuesta menos de un centavo por informe y no tiene ese
-// techo; a cambio exige `reasoningModel: true` (ver `src/model/providers.ts`).
+// techo. Vía el paquete oficial `@ai-sdk/openai` (ADR-018): solo hace falta declarar
+// `reasoningEffort`, el resto de la convención de llamada la resuelve el SDK.
 const lunaFallback = {
-  provider: 'openai-compatible',
+  provider: 'openai',
   id: 'gpt-5.6-luna',
   apiKeyEnv: OPENAI_KEY,
-  baseUrl: 'https://api.openai.com/v1',
-  reasoningModel: true,
   reasoningEffort: 'medium',
 } as const;
 

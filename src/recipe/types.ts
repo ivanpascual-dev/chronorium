@@ -37,11 +37,10 @@ export interface ProviderSpec {
   readonly apiKeyEnv?: string;
   /** Solo `openai-compatible`: el endpoint del proveedor concreto. */
   readonly baseUrl?: string;
-  /** Solo `openai-compatible`: este modelo exige la convención de llamada de los modelos de
-   * razonamiento (`max_completion_tokens` en vez de `max_tokens`, sin `temperature` propia). No se
-   * detecta por el identificador (D-03): quien declara el eslabón lo sabe y lo dice. */
-  readonly reasoningModel?: boolean;
-  /** Solo si `reasoningModel` es `true`: esfuerzo de razonamiento a pedir. */
+  /** Con `provider: 'openai'` o `'google'`: cuánto debe razonar el modelo antes de responder. Es un
+   * campo de dominio único, y cada proveedor lo traduce a su propia convención en `providers.ts`
+   * (`reasoningEffort` en OpenAI, `thinkingConfig.thinkingLevel` en Gemini 3+, ADR-018): quien
+   * escribe la receta no necesita saber cuál. */
   readonly reasoningEffort?: ReasoningEffort;
 }
 

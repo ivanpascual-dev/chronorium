@@ -106,20 +106,30 @@ compuesto entero: exactamente una apertura y un cierre reales, los que añade el
 ## La cadena de proveedores, en código
 
 - `providers.ts` es el registro: nombre de proveedor declarado en la receta → cómo construir su
-  `LanguageModel`. Dos entradas de fábrica, `google` y `openai-compatible`. Se elige por el nombre,
-  nunca inspeccionando la URL o el identificador de modelo (D-03, ADR-012).
+  `LanguageModel`. Tres entradas de fábrica, `google`, `openai` y `openai-compatible`. Se elige por
+  el nombre, nunca inspeccionando la URL o el identificador de modelo (D-03, ADR-012).
 - `chain.ts` expone dos funciones: `diagnoseChain` (sin red, para `validate`/`doctor` en fase 4) y
   `runChain` (recorre la cadena de verdad, usada solo por `synthesize()`).
 - El conjunto de marcadores de posición que `RF-D05` rechaza vive en `chain.ts`
   (`PLACEHOLDER_CREDENTIALS`) y está documentado en `docs/05-seguridad-legal.md`: son el mismo
   texto, y si uno cambia sin el otro es el defecto D-14.
-- **Un eslabón `openai-compatible` puede declarar `reasoningModel: true`** (y opcionalmente
-  `reasoningEffort`) cuando ese modelo concreto exige la convención de llamada de los modelos de
-  razonamiento de OpenAI (`max_completion_tokens` en vez de `max_tokens`, sin `temperature` propia).
-  `providers.ts` lo traduce con `transformRequestBody`, activado solo por lo que la receta declara,
-  nunca por inspeccionar el identificador del modelo (D-03). Verificado con red real contra
-  `gpt-5.6-luna` en la fase 3: sin esto, la API rechaza la llamada tres veces distintas (ver
-  `docs/bitacora.md`, 2026-08-09).
+- **`provider: 'openai'` es el paquete oficial `@ai-sdk/openai`**, no el conector genérico. Ya
+  traduce por sí solo la convención de llamada de sus modelos de razonamiento
+  (`max_completion_tokens`, sin `temperature` propia salvo que se pida `reasoningEffort: 'none'`),
+  verificado contra su código fuente (ADR-018).
+- **`reasoningEffort` es un campo de dominio único** ("cuánto debe razonar el modelo"), con efecto en
+  `provider: 'openai'` y en `provider: 'google'`. Cada uno lo traduce a su propia convención en
+  `providers.ts` (`openAiReasoningOptions` → `providerOptions.openai.reasoningEffort`;
+  `googleReasoningOptions` → `providerOptions.google.thinkingConfig.thinkingLevel`, Gemini 3+), fijado
+  como valor por defecto de esa instancia de modelo con `wrapLanguageModel` +
+  `defaultSettingsMiddleware` (de `ai`), porque solo tiene efecto pasado en la llamada, nunca al
+  construir el modelo. Quien escribe la receta declara un único valor; el nombre que le da cada API es
+  mecanismo, no dominio.
+- **`openai-compatible` se queda como vía genérica** para quien declare otro proveedor remoto
+  compatible (DeepSeek, Groq, OpenRouter) o un modelo local: exige `baseUrl`, y no interpreta
+  `reasoningEffort` (se valida el tipo, pero ese conector lo ignora). Si algún día un proveedor
+  concreto por esa vía necesita una traducción parecida a la de `openai`/`google`, se declara con su
+  propio campo en la receta y su propio ADR, no se adivina por el identificador.
 
 ---
 

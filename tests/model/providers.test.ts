@@ -1,34 +1,33 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { reasoningModelBody } from '../../src/model/providers.ts';
+import {
+  defaultProviderRegistry,
+  googleReasoningOptions,
+  openAiReasoningOptions,
+} from '../../src/model/providers.ts';
 
-test('reasoningModelBody traduce max_tokens a max_completion_tokens', () => {
-  const body = reasoningModelBody({ max_tokens: 4096, model: 'gpt-5.6-luna' }, undefined);
-
-  assert.equal(body.max_completion_tokens, 4096);
-  assert.equal('max_tokens' in body, false);
-});
-
-test('reasoningModelBody quita temperature sin sustituirla por nada', () => {
-  const body = reasoningModelBody({ temperature: 0.2, model: 'gpt-5.6-luna' }, undefined);
-
-  assert.equal('temperature' in body, false);
-});
-
-test('reasoningModelBody añade reasoning_effort solo si se declaró', () => {
-  const conEsfuerzo = reasoningModelBody({ model: 'gpt-5.6-luna' }, 'medium');
-  const sinEsfuerzo = reasoningModelBody({ model: 'gpt-5.6-luna' }, undefined);
-
-  assert.equal(conEsfuerzo.reasoning_effort, 'medium');
-  assert.equal('reasoning_effort' in sinEsfuerzo, false);
-});
-
-test('reasoningModelBody deja intactos los demás campos del cuerpo', () => {
-  const body = reasoningModelBody(
-    { model: 'gpt-5.6-luna', messages: [{ role: 'user', content: 'hola' }] },
-    undefined,
+test('los tres proveedores de fábrica están registrados, elegidos solo por nombre (D-03, ADR-012)', () => {
+  assert.equal(
+    defaultProviderRegistry.get('google')?.defaultApiKeyEnv,
+    'GOOGLE_GENERATIVE_AI_API_KEY',
   );
+  assert.equal(defaultProviderRegistry.get('openai')?.defaultApiKeyEnv, 'OPENAI_API_KEY');
+  assert.equal(
+    defaultProviderRegistry.get('openai-compatible')?.defaultApiKeyEnv,
+    'OPENAI_COMPATIBLE_API_KEY',
+  );
+});
 
-  assert.equal(body.model, 'gpt-5.6-luna');
-  assert.deepEqual(body.messages, [{ role: 'user', content: 'hola' }]);
+test('un proveedor no declarado no está en el registro', () => {
+  assert.equal(defaultProviderRegistry.get('acme'), undefined);
+});
+
+test('openAiReasoningOptions traduce el mismo campo de dominio a la convención de OpenAI', () => {
+  assert.deepEqual(openAiReasoningOptions('medium'), { openai: { reasoningEffort: 'medium' } });
+});
+
+test('googleReasoningOptions traduce el mismo campo de dominio a thinkingConfig de Gemini', () => {
+  assert.deepEqual(googleReasoningOptions('high'), {
+    google: { thinkingConfig: { thinkingLevel: 'high' } },
+  });
 });
