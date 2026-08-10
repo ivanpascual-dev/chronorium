@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { isAbsolute } from 'node:path';
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute } from 'node:path';
 import { normalizeTitle, normalizeUrl } from '../rank/dedupe.ts';
 import type { Item } from '../sources/types.ts';
 
@@ -104,7 +104,9 @@ export function loadSeen(path: string): SeenState {
   return parsed;
 }
 
-/** Escritura atómica (temporal más renombrado): una ejecución interrumpida no deja el estado a medias. */
+/** Escritura atómica (temporal más renombrado): una ejecución interrumpida no deja el estado a
+ * medias. Crea su directorio padre si falta: una instancia recién clonada no trae `state/` (H2,
+ * git no versiona directorios vacíos). */
 export function saveSeen(path: string, state: SeenState): void {
   if (!isAbsolute(path)) {
     throw new SeenLoadError(
@@ -112,6 +114,7 @@ export function saveSeen(path: string, state: SeenState): void {
     );
   }
 
+  mkdirSync(dirname(path), { recursive: true });
   const tmpPath = `${path}.tmp-${process.pid}-${Date.now()}`;
   writeFileSync(tmpPath, JSON.stringify(state, null, 2), 'utf8');
   renameSync(tmpPath, path);

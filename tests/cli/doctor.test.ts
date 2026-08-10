@@ -27,9 +27,11 @@ function runRecordLine(recipe: string, result: 'ok' | 'model_failed', offsetMs =
   });
 }
 
+// H2/D2: `state/runs.ndjson`, no la raíz del directorio de datos.
 function writeRuns(dataRoot: string, lines: readonly string[]): void {
-  mkdirSync(dataRoot, { recursive: true });
-  writeFileSync(join(dataRoot, 'runs.ndjson'), `${lines.join('\n')}\n`, 'utf8');
+  const stateDir = join(dataRoot, 'state');
+  mkdirSync(stateDir, { recursive: true });
+  writeFileSync(join(stateDir, 'runs.ndjson'), `${lines.join('\n')}\n`, 'utf8');
 }
 
 test('sin --recipe ⇒ código 1', async () => {

@@ -105,7 +105,7 @@ para y replantea.
 
 ## FASE 5 · Ejecución programada y la instancia
 
-- [ ] Workflow reutilizable en el repositorio público, con grupo de concurrencia
+- [x] Workflow reutilizable en el repositorio público, con grupo de concurrencia
 - [ ] Crear el repositorio privado de la instancia
 - [ ] Recetas reales: la diaria y el resumen semanal del lunes
 - [ ] Secretos en el repositorio de la instancia

@@ -26,6 +26,14 @@ workflow del repositorio público, así que quien controle ese repositorio ejecu
 mitiga con `ADR-014`: **las instancias fijan una etiqueta, no la rama principal.** Un cambio malicioso
 o simplemente roto en la rama principal no llega a nadie hasta que alguien sube su etiqueta a mano.
 
+**El mecanismo, desde la fase 5.** Fijar la etiqueta en el `uses:` del llamador (`.github/workflows/briefing.yml`) solo sirve si el segundo checkout, el que trae el código de la herramienta,
+respeta esa misma referencia. `.github/workflows/run.yml` no usa `main` ni una rama para ese segundo
+checkout: usa el contexto `job.workflow_repository`/`job.workflow_sha`, que GitHub resuelve a la
+referencia exacta que el llamador pinó en su propio `uses:` (verificado contra la documentación de
+GitHub Actions el 2026-08-10, T0 de la fase 5; no `github.workflow_sha`, que dentro de un reusable
+workflow apunta al workflow de nivel superior, no a este fichero). Sin este mecanismo, ADR-014 sería
+una promesa en la documentación, no una garantía que el propio workflow hace cumplir.
+
 ---
 
 ## Las defensas, y dónde vive cada una

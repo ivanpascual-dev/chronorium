@@ -1,4 +1,4 @@
-import { basename, isAbsolute, join } from 'node:path';
+import { basename, isAbsolute } from 'node:path';
 import type { DeliverOutcome } from '../deliver/registry.ts';
 import { deliver, type NotifierRegistry } from '../deliver/registry.ts';
 import type { FetchLike as DeliverFetchLike } from '../deliver/types.ts';
@@ -19,6 +19,7 @@ import { collect } from '../sources/collect.ts';
 import { defaultRegistry, type ReaderRegistry } from '../sources/registry.ts';
 import type { Item, FetchLike as SourceFetchLike } from '../sources/types.ts';
 import { archiveExists, writeArchive } from '../state/archive.ts';
+import { statePaths } from '../state/paths.ts';
 import { appendRun, readHealth } from '../state/runs.ts';
 import {
   dayStamp,
@@ -102,8 +103,7 @@ export async function runOnce(options: RunOnceOptions): Promise<RunOnceResult> {
   const start = Date.now();
   const recipeName = basename(options.recipeDir);
   const date = dayStamp(options.now);
-  const runsPath = join(options.dataRoot, 'runs.ndjson');
-  const seenPath = join(options.dataRoot, 'seen.json');
+  const { seenPath, runsPath } = statePaths(options.dataRoot, recipeName);
   const timeoutMs = options.timeoutMs ?? 10_000;
 
   function finish(
@@ -351,7 +351,7 @@ export async function cliRun(
     secret: (name) => env[name],
     sourceFetch: realSourceFetch,
     deliverFetch: realDeliverFetch,
-    userAgent: 'chronorium/1.0 (+https://github.com/)',
+    userAgent: 'chronorium/1.0 (+https://github.com/ivanpascual-dev/chronorium)',
   });
 
   if (result.rendered !== undefined && result.result === 'ok' && booleans.has('dry-run')) {

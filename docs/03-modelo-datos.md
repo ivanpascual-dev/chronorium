@@ -9,12 +9,14 @@ formato que cada fase interpreta a su manera se convierte en una migración a lo
 ```text
 archive/YYYY-MM-DD--<recipe>.json    el informe, dato canónico
 archive/YYYY-MM-DD--<recipe>.md      el mismo informe, para leer y para pegar
-state/seen.json                      huellas de lo ya mostrado
-state/runs.ndjson                    una línea por ejecución
+state/seen--<recipe>.json            huellas de lo ya mostrado, una por receta
+state/runs.ndjson                    una línea por ejecución, una sola para toda la instancia
 ```
 
-El nombre lleva la receta porque hay dos que escriben el mismo día (la diaria y el resumen semanal
-del lunes).
+El archivo y la memoria de lo ya visto llevan la receta en el nombre porque hay dos que escriben en
+la misma instancia (la diaria y el resumen semanal del lunes) y no pueden pisarse (ADR-021). El
+registro de ejecuciones no la lleva: es una sola cuenta por instancia, y `readHealth` filtra por
+receta al leerlo.
 
 ---
 
@@ -93,14 +95,17 @@ cuando la haya.
 
 ---
 
-## `state/seen.json`
+## `state/seen--<receta>.json`
 
-Evita que un elemento reaparezca días seguidos. Es lo que el sistema anterior no tenía.
+Evita que un elemento reaparezca días seguidos. Es lo que el sistema anterior no tenía. Un fichero
+por receta (ADR-021): la semanal destila los informes de la diaria por la fuente `archive`, y esos
+elementos comparten url y título con lo que la diaria ya marcó, así que un fichero compartido haría
+que la semanal viera cero elementos siempre.
 
 ```jsonc
 {
   "schemaVersion": 1,
-  "windowDays": 30,
+  "windowDays": 7,
   "entries": [
     { "h": "a3f1...", "firstSeen": "2026-07-22", "kind": "url" },
     { "h": "9c02...", "firstSeen": "2026-07-22", "kind": "title" },
@@ -111,7 +116,10 @@ Evita que un elemento reaparezca días seguidos. Es lo que el sistema anterior n
 - Dos huellas por elemento: una de la dirección y otra del **título normalizado** (minúsculas, sin
   acentos ni puntuación). La segunda es la que atrapa la misma noticia publicada en dos sitios.
 - Se guarda la huella, no el texto: el fichero no crece y no expone qué se leyó.
-- **Se poda en cada ejecución** por `windowDays`. Sin poda, este fichero es el que acaba pesando.
+- **Se poda en cada ejecución** por `windowDays`, que es el mismo número que `window.days` de la
+  receta (RF-C02): la memoria de lo ya mostrado dura lo que dura la ventana de recolección. Si algún
+  día molesta que un elemento pueda reaparecer justo al filo de la ventana, la vía es un
+  `window.memoryDays` opcional, no un número fijo aquí.
 
 ---
 
@@ -134,7 +142,8 @@ nombres de fichero, que es como se descubrió que faltaban once días.
 
 ## Ciclo de vida y concurrencia
 
-1. El proceso lee `seen.json` al arrancar y `runs.ndjson` solo para calcular la salud agregada.
+1. El proceso lee `seen--<receta>.json` (la suya, no la de otra receta) al arrancar, y `runs.ndjson`
+   solo para calcular la salud agregada.
 2. Escribe los cuatro ficheros al terminar, **también si falla**: una ejecución fallida deja su línea
    en `runs.ndjson`. Un fallo que no deja rastro es el que se pierde.
 3. El workflow commitea y empuja los cambios.
@@ -150,7 +159,7 @@ nombres de fichero, que es como se descubrió que faltaban once días.
 | Fichero             | Ritmo                                  | A tres años              |
 | ------------------- | -------------------------------------- | ------------------------ |
 | `archive/`          | 2 informes al día, unos 12 KB cada uno | ~26 MB                   |
-| `state/seen.json`   | acotado por la ventana                 | unos pocos cientos de KB |
+| `state/seen--*.json` | acotado por la ventana, uno por receta | unos pocos cientos de KB |
 | `state/runs.ndjson` | ~730 líneas al año                     | ~1 MB                    |
 
 Holgado para un repositorio de git durante años. **Si algún día dejara de serlo** (muchas recetas,
