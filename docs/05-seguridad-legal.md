@@ -75,10 +75,12 @@ una revisión de una sola vez: es un test que corre siempre.
 | 9   | Credencial que es marcador de posición | valor igual al de la plantilla documentada                                                                | la validación lo rechaza antes de ejecutar                  |
 | 10  | Punto único de fallo                   | una sola credencial válida configurada                                                                    | el arranque emite la advertencia                            |
 | 11  | Cierre del delimitador                 | un elemento cuyo título, resumen, url o fuente contiene `</elementos-no-confiables>`                      | no cierra el bloque real: exactamente una apertura y un cierre en el prompt compuesto |
+| 12  | Fuga de credencial en un canal de entrega | un notificador de correo cuyo transporte lanza un error de autenticación con el usuario y la contraseña en el mensaje | ni `state/runs.ndjson` ni el informe devuelto contienen la contraseña ni el usuario (A4) |
 
-Los once corren **sin red**: las fuentes son ficheros guardados o generados en el propio test, y el
-modelo es un doble. Eso es lo que permite que sean parte del CI y no un ritual que se salta cuando
-hay prisa. Viven en `tests/security/bateria.test.ts`, cableados como comando (`pnpm run bateria`).
+Los doce corren **sin red**: las fuentes son ficheros guardados o generados en el propio test, y el
+modelo y el transporte de correo son dobles. Eso es lo que permite que sean parte del CI y no un
+ritual que se salta cuando hay prisa. Viven en `tests/security/bateria.test.ts`, cableados como
+comando (`pnpm run bateria`).
 
 **El conjunto de marcadores de posición del caso 9**, declarado en un solo sitio
 (`src/model/chain.ts`, `PLACEHOLDER_CREDENTIALS`) y documentado aquí para que quien escriba la guía
@@ -105,7 +107,8 @@ sin informe.
 | ------------------------------------ | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Credencial del proveedor de modelo   | sí                           | generar el informe                                                                                                                                                                                       |
 | Segunda credencial de otro proveedor | **muy recomendada**          | quita el punto único de fallo. Ver ADR-009                                                                                                                                                               |
-| Credenciales de correo               | según la entrega configurada | enviar el informe                                                                                                                                                                                        |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | solo si el canal `email` está activo | enviar el informe por SMTP (fase 4, ADR-020). Con Gmail, `SMTP_PASSWORD` es una contraseña de aplicación (exige verificación en dos pasos), nunca la contraseña de la cuenta |
+| `TELEGRAM_BOT_TOKEN`                 | solo si el canal `telegram` está activo | enviar el informe por la API de bots de Telegram (fase 4). El canal está desactivado por defecto (ADR-011) |
 | `GITHUB_TOKEN`                       | **no**, opcional (fase 2)    | los lectores `repo-search` y `repo-releases` lo usan solo si está presente, para subir de 10 a 30 peticiones por minuto contra la API de GitHub; su ausencia no rompe ninguna receta de fábrica (RF-B04) |
 
 **Dos secretos para arrancar.** Cada uno de más aleja el objetivo de que un desconocido llegue a su

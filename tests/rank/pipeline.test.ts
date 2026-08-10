@@ -8,6 +8,7 @@ const now = new Date('2026-08-08T00:00:00.000Z');
 
 function recipe(overrides: Partial<RecipeConfig> = {}): RecipeConfig {
   return {
+    name: 'receta-de-prueba',
     language: 'es',
     topics: ['x'],
     persona: { text: 'persona' },
@@ -17,6 +18,8 @@ function recipe(overrides: Partial<RecipeConfig> = {}): RecipeConfig {
     window: { days: 30 },
     scoring: { recencyWeight: 0, topicsWeight: 1 },
     caps: { maxItems: 100, perSourceMaxPercent: 100 },
+    delivery: [],
+    health: { windowDays: 30, runFailureThreshold: 0.2, sourceFailureThreshold: 0.5 },
     ...overrides,
   };
 }

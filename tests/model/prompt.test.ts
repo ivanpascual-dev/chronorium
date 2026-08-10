@@ -4,6 +4,9 @@ import { composePrompt, type Item } from '../../src/model/prompt.ts';
 import type { RecipeConfig } from '../../src/recipe/types.ts';
 
 const recipe: RecipeConfig = {
+  name: 'receta-de-prueba',
+  delivery: [],
+  health: { windowDays: 30, runFailureThreshold: 0.2, sourceFailureThreshold: 0.5 },
   language: 'español',
   topics: ['inteligencia artificial', 'herramientas de desarrollo'],
   persona: { text: 'Eres el asistente de alguien que desarrolla en solitario.' },

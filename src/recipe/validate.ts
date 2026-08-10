@@ -1,3 +1,4 @@
+import { defaultNotifierRegistry, type NotifierRegistry } from '../deliver/registry.ts';
 import { defaultProviderRegistry, type ProviderRegistry } from '../model/providers.ts';
 import type { ReaderRegistry } from '../sources/registry.ts';
 import { defaultRegistry } from '../sources/registry.ts';
@@ -25,6 +26,8 @@ export interface ValidateRecipeOptions {
   readonly registry?: ReaderRegistry;
   /** Inyectado para poder probar con proveedores de modelo que no son de fábrica, sin red (R13). */
   readonly providerRegistry?: ProviderRegistry;
+  /** Inyectado para poder probar con notificadores que no son de fábrica, sin red (R13). */
+  readonly notifierRegistry?: NotifierRegistry;
 }
 
 function validateSourceFields(
@@ -193,6 +196,144 @@ function validateCaps(raw: unknown, issues: ValidationIssue[]): void {
   }
 }
 
+/** Campos propios de cada canal de fábrica: bolsa abierta (`DeliveryChannel`), mismo motivo que
+ * `SourceSpec` (cada lector/notificador conoce solo sus propios campos, `validate.ts` es el único
+ * sitio que sabe qué exige cada `id`). */
+const KNOWN_CHANNEL_FIELDS: Readonly<Record<string, readonly string[]>> = {
+  email: ['to', 'from'],
+  telegram: ['chatId'],
+  webhook: ['url'],
+};
+
+/**
+ * Un canal desconocido es un error de receta (RF-F03). Un canal activo cuyos `requiredSecrets` no
+ * están en el entorno hace fallar la validación, con el nombre de la variable (misma regla que
+ * RF-B03 aplica a las fuentes). Cero canales activos es válido (RF-B04, RF-H04): un informe
+ * archivado ya es un informe entregado.
+ */
+function validateDelivery(
+  raw: unknown,
+  issues: ValidationIssue[],
+  registry: NotifierRegistry,
+  secret: (name: string) => string | undefined,
+): void {
+  if (!Array.isArray(raw)) {
+    issues.push({
+      campo: 'delivery',
+      motivo: 'debe ser una lista de canales de entrega (puede ser una lista vacía)',
+    });
+    return;
+  }
+
+  const seenIds = new Map<string, number>();
+
+  raw.forEach((rawChannel, index) => {
+    const path = `delivery[${index}]`;
+
+    if (!isRecord(rawChannel)) {
+      issues.push({ campo: path, motivo: 'el canal debe ser un objeto' });
+      return;
+    }
+
+    const { id, enabled } = rawChannel;
+    const label = isNonEmptyString(id) ? id : `#${index}`;
+
+    if (!isNonEmptyString(id)) {
+      issues.push({ campo: `${path}.id`, motivo: 'falta el identificador del canal' });
+    } else {
+      const firstIndex = seenIds.get(id);
+      if (firstIndex !== undefined) {
+        issues.push({
+          campo: `${path}.id`,
+          motivo: `el identificador "${id}" ya está declarado en delivery[${firstIndex}]`,
+        });
+      } else {
+        seenIds.set(id, index);
+      }
+    }
+
+    if (typeof enabled !== 'boolean') {
+      issues.push({
+        campo: `${path}.enabled`,
+        motivo: `el canal "${label}" debe declarar "enabled" (true o false)`,
+      });
+    }
+
+    if (!isNonEmptyString(id)) {
+      return;
+    }
+
+    const notifier = registry.get(id);
+    if (!notifier) {
+      issues.push({ campo: `${path}.id`, motivo: `canal de entrega desconocido "${id}"` });
+      return;
+    }
+
+    for (const field of KNOWN_CHANNEL_FIELDS[id] ?? []) {
+      if (!isNonEmptyString(rawChannel[field])) {
+        issues.push({
+          campo: `${path}.${field}`,
+          motivo: `el canal "${id}" exige "${field}"`,
+        });
+      }
+    }
+
+    if (enabled === true) {
+      for (const secretName of notifier.requiredSecrets) {
+        if (secret(secretName) === undefined) {
+          issues.push({
+            campo: path,
+            motivo: `el canal "${id}" está activo y exige la credencial "${secretName}", ausente en el entorno`,
+          });
+        }
+      }
+    }
+  });
+}
+
+function validateHealth(raw: unknown, issues: ValidationIssue[]): void {
+  if (!isRecord(raw)) {
+    issues.push({ campo: 'health', motivo: 'falta la declaración de los umbrales de salud' });
+    return;
+  }
+
+  if (typeof raw.windowDays !== 'number' || raw.windowDays <= 0) {
+    issues.push({
+      campo: 'health.windowDays',
+      motivo: 'declara la ventana de salud en días, un número mayor que cero',
+    });
+  }
+
+  if (
+    typeof raw.runFailureThreshold !== 'number' ||
+    raw.runFailureThreshold < 0 ||
+    raw.runFailureThreshold > 1
+  ) {
+    issues.push({
+      campo: 'health.runFailureThreshold',
+      motivo: 'declara la proporción de ejecuciones fallidas que activa el aviso, entre 0 y 1',
+    });
+  }
+
+  if (
+    typeof raw.sourceFailureThreshold !== 'number' ||
+    raw.sourceFailureThreshold < 0 ||
+    raw.sourceFailureThreshold > 1
+  ) {
+    issues.push({
+      campo: 'health.sourceFailureThreshold',
+      motivo:
+        'declara la proporción de fuentes fallidas de esta ejecución que activa el aviso, entre 0 y 1',
+    });
+  }
+}
+
+function validateSubject(raw: unknown, issues: ValidationIssue[]): void {
+  if (raw !== undefined && (typeof raw !== 'string' || raw.length === 0)) {
+    issues.push({ campo: 'subject', motivo: 'si se declara, "subject" debe ser texto no vacío' });
+  }
+}
+
 function validateProviderSpec(
   raw: unknown,
   path: string,
@@ -338,6 +479,7 @@ export function validateRecipeFields(
 
   const registry = options.registry ?? defaultRegistry;
   const providerRegistry = options.providerRegistry ?? defaultProviderRegistry;
+  const notifierRegistry = options.notifierRegistry ?? defaultNotifierRegistry;
   const secret = options.secret ?? defaultSecret;
   const issues: ValidationIssue[] = [];
 
@@ -361,6 +503,9 @@ export function validateRecipeFields(
   validateWindow(raw.window, issues);
   validateScoring(raw.scoring, issues);
   validateCaps(raw.caps, issues);
+  validateDelivery(raw.delivery, issues, notifierRegistry, secret);
+  validateHealth(raw.health, issues);
+  validateSubject(raw.subject, issues);
 
   return issues;
 }

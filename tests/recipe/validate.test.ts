@@ -8,6 +8,8 @@ const validBase = {
   language: 'es',
   topics: ['inteligencia artificial'],
   model: { provider: 'google', id: 'gemini-test' },
+  delivery: [],
+  health: { windowDays: 30, runFailureThreshold: 0.2, sourceFailureThreshold: 0.5 },
 };
 
 function campos(issues: readonly { campo: string }[]): string[] {
@@ -344,4 +346,82 @@ test('todos los errores se devuelven juntos, no se aborta en el primero', () => 
   assert.ok(encontrados.includes('window.days'));
   assert.ok(encontrados.includes('scoring.recencyWeight'));
   assert.ok(encontrados.includes('caps.maxItems'));
+});
+
+function fullRecipe(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    ...validBase,
+    sources: [],
+    window: { days: 30 },
+    scoring: { recencyWeight: 1, topicsWeight: 1 },
+    caps: { maxItems: 10, perSourceMaxPercent: 50 },
+    ...overrides,
+  };
+}
+
+test('delivery: cero canales activos es válido (RF-B04, RF-H04)', () => {
+  assert.deepEqual(validateRecipeFields(fullRecipe({ delivery: [] })), []);
+});
+
+test('delivery: un canal desconocido produce un error que lo nombra', () => {
+  const issues = validateRecipeFields(fullRecipe({ delivery: [{ id: 'fax', enabled: false }] }));
+  assert.ok(issues.some((issue) => issue.motivo.includes('fax')));
+});
+
+test('delivery: el canal "email" exige "to" y "from"', () => {
+  const issues = validateRecipeFields(fullRecipe({ delivery: [{ id: 'email', enabled: false }] }));
+  assert.ok(campos(issues).includes('delivery[0].to'));
+  assert.ok(campos(issues).includes('delivery[0].from'));
+});
+
+test('delivery: un canal activo cuya credencial falta en el entorno hace fallar la validación, nombrando la variable', () => {
+  const issues = validateRecipeFields(
+    fullRecipe({
+      delivery: [{ id: 'telegram', enabled: true, chatId: '123' }],
+    }),
+    { secret: () => undefined },
+  );
+  assert.ok(issues.some((issue) => issue.motivo.includes('TELEGRAM_BOT_TOKEN')));
+});
+
+test('delivery: con la credencial presente, el mismo canal activo no produce error', () => {
+  const issues = validateRecipeFields(
+    fullRecipe({
+      delivery: [{ id: 'telegram', enabled: true, chatId: '123' }],
+    }),
+    { secret: (name) => (name === 'TELEGRAM_BOT_TOKEN' ? 'token' : undefined) },
+  );
+  assert.deepEqual(issues, []);
+});
+
+test('delivery: dos canales con el mismo id producen un error', () => {
+  const issues = validateRecipeFields(
+    fullRecipe({
+      delivery: [
+        { id: 'webhook', enabled: false, url: 'https://x.example' },
+        { id: 'webhook', enabled: false, url: 'https://y.example' },
+      ],
+    }),
+  );
+  assert.ok(campos(issues).includes('delivery[1].id'));
+});
+
+test('health: umbrales fuera de [0, 1] o windowDays no positivo producen error', () => {
+  const issues = validateRecipeFields(
+    fullRecipe({
+      health: { windowDays: 0, runFailureThreshold: 2, sourceFailureThreshold: -1 },
+    }),
+  );
+  assert.ok(campos(issues).includes('health.windowDays'));
+  assert.ok(campos(issues).includes('health.runFailureThreshold'));
+  assert.ok(campos(issues).includes('health.sourceFailureThreshold'));
+});
+
+test('subject: si se declara, debe ser texto no vacío', () => {
+  const issues = validateRecipeFields(fullRecipe({ subject: '' }));
+  assert.ok(campos(issues).includes('subject'));
+});
+
+test('subject: ausente es válido (plantilla opcional)', () => {
+  assert.deepEqual(validateRecipeFields(fullRecipe()), []);
 });

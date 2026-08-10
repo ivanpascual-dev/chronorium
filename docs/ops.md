@@ -62,8 +62,8 @@ para y replantea.
 - [x] Corrección del radar de repositorios: ordenar por crecimiento en la ventana, no por total
       acumulado, y excluir lo mostrado en los últimos 30 días
 
-  **Construida, pendiente de confirmación del dueño (ver `docs/bitacora.md`).** `@fiel-al-plan` y
-  `/verifier` no se lanzan hasta esa confirmación.
+  **Confirmada por el dueño (T17) y cerrada** con `@fiel-al-plan` y `/verifier` (con
+  `@guardarrailes`) en verde. Ver `docs/bitacora.md`, entrada del 2026-08-08.
 
 ---
 
@@ -77,20 +77,28 @@ para y replantea.
 - [x] Delimitación de la entrada no confiable en el prompt, con el delimitador blindado
 - [x] Batería de ataques repetible (`docs/05-seguridad-legal.md`), cableada como comando
 
-  **Construida, pendiente de confirmación del dueño (ver `docs/bitacora.md`).** `@fiel-al-plan` y
-  `/verifier` no se lanzan hasta esa confirmación.
+  **Confirmada por el dueño y cerrada.** Ver `docs/bitacora.md`, entradas del 2026-08-08 y
+  2026-08-09 (incluida la corrección post-cierre de `@ai-sdk/openai`).
 
 ---
 
 ## FASE 4 · Renderizado, entrega y archivo
 
-- [ ] Tests de escapado y de renderizado sin conocer nombres de sección
-- [ ] Tres renderizadores desde un mismo objeto: datos, marcado ligero y correo
-- [ ] Notificador de correo, y Telegram como ejemplo desactivado
-- [ ] Escritura del archivo, del estado y del registro de ejecuciones
-- [ ] Códigos de salida diferenciados
-- [ ] Estado agregado dentro del propio informe cuando la tasa de fallo supere el umbral
-- [ ] Conversión e importación de los 45 informes del sistema anterior, con marca de versión
+- [x] Tests de escapado y de renderizado sin conocer nombres de sección
+- [x] Tres renderizadores desde un mismo objeto: datos, marcado ligero y correo
+- [x] Notificador de correo, y Telegram como ejemplo desactivado (más webhook, D3)
+- [x] Escritura del archivo, del estado y del registro de ejecuciones
+- [x] Códigos de salida diferenciados
+- [x] Estado agregado dentro del propio informe cuando la tasa de fallo supere el umbral
+- [x] ~~Conversión e importación de los 45 informes del sistema anterior, con marca de versión~~
+      **Retirada, ver ADR-019 (supersede al ADR-013).** El archivo de cada instancia nace vacío.
+
+  **Construida (T0-T15 del plan), pendiente de confirmación del dueño (ver `docs/bitacora.md`).**
+  `@fiel-al-plan` y `/verifier` no se lanzan hasta esa confirmación. En particular, T15 (la prueba
+  con red real) solo corrió su parte 1 sin credenciales; las partes 2 y 3 y el juicio del dueño
+  (T16 del plan) quedan pendientes de que el dueño exporte las credenciales de modelo y de SMTP.
+  `tests/cli/validate.test.ts` y `tests/cli/doctor.test.ts` (deuda anotada el 2026-08-09) se
+  escribieron el 2026-08-10, 314 tests en verde.
 
 ---
 

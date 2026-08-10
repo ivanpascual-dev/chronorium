@@ -53,3 +53,34 @@ scoring:
 caps:
   maxItems: 60
   perSourceMaxPercent: 40
+
+# Cero canales activos es válido (RF-B04, RF-H04): un desconocido con solo la credencial del
+# modelo obtiene su informe en el archivo, y activa el correo (o cualquiera de los otros dos)
+# cuando quiera. Un informe archivado ya es un informe entregado.
+delivery:
+  - id: email
+    enabled: false
+    to: tu-correo@example.com
+    from: chronorium@example.com
+    # Activarlo exige cuatro secretos en el entorno, nunca en un fichero (R3):
+    #   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD
+    # Con Gmail: smtp.gmail.com, 465 (TLS implícito) o 587 (STARTTLS), y SMTP_PASSWORD es una
+    # contraseña de aplicación (exige verificación en dos pasos), nunca la contraseña de la cuenta.
+
+  - id: telegram
+    enabled: false
+    chatId: '000000000'
+    # Activarlo exige TELEGRAM_BOT_TOKEN en el entorno. Se queda desactivado a propósito: existe
+    # para demostrar que el contrato de notificadores funciona con una segunda forma de credencial
+    # (ADR-011), no porque haga falta para el arranque rápido.
+
+  - id: webhook
+    enabled: false
+    url: https://example.com/webhook
+    # Sin credencial: la URL es dominio del operador. POST crudo con el informe en JSON.
+
+# Umbrales de salud (RF-G02, RF-G05): el estado agregado que viaja dentro del propio informe.
+health:
+  windowDays: 30
+  runFailureThreshold: 0.2
+  sourceFailureThreshold: 0.5

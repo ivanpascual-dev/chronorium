@@ -18,8 +18,18 @@ sections:
     condition: always
     fields:
       - { name: title, type: string }
-      - { name: verdict, type: string, description: 'Tu opinión sobre por qué importa o no importa.' }
-      - { name: why, type: string, description: 'El razonamiento detrás del veredicto.' }
+      - {
+          name: verdict,
+          type: string,
+          label: 'Veredicto',
+          description: 'Tu opinión sobre por qué importa o no importa.',
+        }
+      - {
+          name: why,
+          type: string,
+          label: 'Por qué',
+          description: 'El razonamiento detrás del veredicto.',
+        }
       - { name: link, type: url }
 
   - key: applicable
@@ -33,6 +43,7 @@ sections:
       - {
           name: action,
           type: string,
+          label: 'Acción',
           description: 'Qué hacer esta semana con tus manos, no estrategia de empresa.',
         }
       - { name: link, type: url }

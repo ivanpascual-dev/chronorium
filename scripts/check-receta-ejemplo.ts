@@ -6,9 +6,17 @@
 // sección de recipes/example (R12): genera una salida simulada recorriendo las secciones que la
 // propia receta declare, sean cuales sean.
 
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MockLanguageModelV4 } from 'ai/test';
+import { buildNotifierRegistry, deliver } from '../src/deliver/registry.ts';
+import type {
+  DeliverContext,
+  FetchLike as DeliverFetchLike,
+  Notifier,
+  NotifierConfig,
+} from '../src/deliver/types.ts';
 import { generateReport } from '../src/model/client.ts';
 import { composePrompt } from '../src/model/prompt.ts';
 import { projectRoot, resolveRecipeDir } from '../src/paths.ts';
@@ -16,9 +24,15 @@ import { runPipeline } from '../src/rank/pipeline.ts';
 import { loadRecipe } from '../src/recipe/load.ts';
 import { deriveSections } from '../src/recipe/schema.ts';
 import type { FieldSpec, SectionSpec } from '../src/recipe/types.ts';
+import { emailRenderer } from '../src/render/email.ts';
+import { jsonRenderer } from '../src/render/json.ts';
+import { markdownRenderer } from '../src/render/markdown.ts';
+import { buildReport, buildSubject } from '../src/render/report.ts';
+import type { RenderedReport } from '../src/render/types.ts';
 import { collect } from '../src/sources/collect.ts';
 import { defaultRegistry } from '../src/sources/registry.ts';
 import type { FetchLike, Item } from '../src/sources/types.ts';
+import { archivePaths, writeArchive } from '../src/state/archive.ts';
 
 const fixturesDir = join(projectRoot, 'tests', 'fixtures');
 
@@ -142,9 +156,9 @@ async function main(): Promise<void> {
   const mockOutput = mockReport(derivedResult.value.sections, ranked);
   const model = mockModel(JSON.stringify(mockOutput));
 
-  const report = await generateReport({ model, prompt, derived: derivedResult.value });
+  const modelOutput = await generateReport({ model, prompt, derived: derivedResult.value });
 
-  if (typeof report !== 'object' || report === null) {
+  if (typeof modelOutput !== 'object' || modelOutput === null) {
     throw new Error('recipes/example no produjo un informe válido con el modelo simulado');
   }
 
@@ -152,7 +166,99 @@ async function main(): Promise<void> {
     `recipes/example recolecta (${collected.length} elementos crudos, ${ranked.length} tras el pipeline de rank/) ` +
       `y produce un informe válido con un modelo simulado (RF-H05).`,
   );
+
+  // RF-A04, el primero de los tres criterios de docs/01-especificacion.md:345. Se añade una sección
+  // en memoria, ajena a lo que recipes/example declara, y se comprueba que aparece en los tres
+  // formatos sin que ningún fichero de src/ la conozca (R12). No hace falta que el modelo doblado
+  // sepa nada de ella: se añade después de generar, igual que si la receta la hubiera declarado.
+  const extraSection: SectionSpec = {
+    key: 'seccion-anadida-en-memoria',
+    title: 'Sección añadida en memoria (RF-A04)',
+    cardinality: 'one',
+    condition: 'always',
+    fields: [{ name: 'texto', type: 'string' }],
+  };
+  const sectionsConExtra = [...derivedResult.value.sections, extraSection];
+  const modelOutputConExtra = {
+    ...(modelOutput as Record<string, unknown>),
+    [extraSection.key]: mockItem(extraSection.fields, ranked),
+  };
+
+  const health = { windowDays: recipe.health.windowDays, runsOk: 0, runsFailed: 0 };
+  const report = buildReport({
+    recipe: { ...recipe, sections: sectionsConExtra },
+    date: '2026-08-08',
+    generatedAt: FIXED_NOW.toISOString(),
+    modelOutput: modelOutputConExtra,
+    provider: 'modelo-simulado',
+    providerWasFallback: false,
+    linksDropped: 0,
+    itemsCollected: collected.length,
+    itemsAnalyzed: ranked.length,
+    sourcesOk: results.length,
+    sourcesFailed: 0,
+    health,
+  });
+
+  const rendered: RenderedReport = {
+    report,
+    subject: buildSubject(recipe, report),
+    markdown: markdownRenderer.render(report, sectionsConExtra),
+    html: emailRenderer.render(report, sectionsConExtra),
+    json: jsonRenderer.render(report, sectionsConExtra),
+  };
+
+  for (const [formato, contenido] of [
+    ['json', rendered.json],
+    ['markdown', rendered.markdown],
+    ['correo', rendered.html],
+  ] as const) {
+    if (!contenido.includes(extraSection.title)) {
+      throw new Error(
+        `RF-A04: la sección añadida en memoria no aparece en el formato "${formato}". ` +
+          'Un renderizador está mirando claves de sección concretas (R12), o buildReport la descarta.',
+      );
+    }
+  }
+  console.log('RF-A04: una sección declarada solo en memoria aparece en json, markdown y correo.');
+
+  // Archivo, en un directorio temporal (T14): demuestra que el escritor y los renderizadores
+  // conviven, sin dejar nada en el árbol del repositorio.
+  const dataRoot = mkdtempSync(join(tmpdir(), 'chronorium-check-receta-'));
+  try {
+    const paths = writeArchive(dataRoot, report, rendered.markdown);
+    if (paths.jsonPath !== archivePaths(dataRoot, report.date, report.recipe).jsonPath) {
+      throw new Error('la ruta de archivo escrita no coincide con la esperada');
+    }
+    console.log(`Archivado en un directorio temporal: ${paths.jsonPath}`);
+
+    // Entrega con un notificador simulado (T14): no conoce ninguna clave de sección, solo el
+    // informe ya renderizado.
+    let entregado: RenderedReport | undefined;
+    const notificadorSimulado: Notifier = {
+      id: 'simulado',
+      requiredSecrets: [],
+      async send(rendered: RenderedReport): Promise<void> {
+        entregado = rendered;
+      },
+    };
+    const registry = buildNotifierRegistry([notificadorSimulado]);
+    const canal: NotifierConfig = { id: 'simulado', enabled: true };
+    const ctx: DeliverContext = { secret: () => undefined, fetch: neverFetch, timeoutMs: 1000 };
+
+    const outcome = await deliver({ channels: [canal], rendered, ctx, registry });
+    if (!outcome.ok || entregado === undefined) {
+      throw new Error('el notificador simulado no recibió el informe renderizado');
+    }
+    console.log('Entrega simulada: el notificador de ejemplo recibió el informe renderizado.');
+  } finally {
+    rmSync(dataRoot, { recursive: true, force: true });
+  }
 }
+
+const neverFetch: DeliverFetchLike = async () => {
+  throw new Error('check-receta-ejemplo: el notificador simulado no debe usar fetch');
+};
 
 main().catch((error: unknown) => {
   console.error(error);

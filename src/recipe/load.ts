@@ -1,9 +1,11 @@
 import { readFileSync } from 'node:fs';
-import { isAbsolute, join } from 'node:path';
+import { basename, isAbsolute, join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { deriveSections } from './schema.ts';
 import type {
   CapsConfig,
+  DeliveryChannel,
+  HealthConfig,
   ModelConfig,
   RecipeConfig,
   ScoringConfig,
@@ -11,7 +13,7 @@ import type {
   ValidationIssue,
   WindowConfig,
 } from './types.ts';
-import { validateRecipeFields } from './validate.ts';
+import { type ValidateRecipeOptions, validateRecipeFields } from './validate.ts';
 
 export class RecipeLoadError extends Error {
   readonly issues?: readonly ValidationIssue[];
@@ -48,7 +50,12 @@ function readYamlFile(path: string): unknown {
   }
 }
 
-export function loadRecipe(recipeDir: string): RecipeConfig {
+/** `validateOptions` se inyecta hacia `validateRecipeFields` (R13): permite que `validate`/`doctor`
+ * del CLI (y sus tests) lean secretos y registros sin depender de verdad del entorno. */
+export function loadRecipe(
+  recipeDir: string,
+  validateOptions: ValidateRecipeOptions = {},
+): RecipeConfig {
   if (!isAbsolute(recipeDir)) {
     throw new RecipeLoadError(
       `la ruta de la receta debe ser absoluta, y no depender del directorio de trabajo: ${recipeDir}`,
@@ -66,7 +73,7 @@ export function loadRecipe(recipeDir: string): RecipeConfig {
     throw new RecipeLoadError(`no se pudo leer ${personaPath}: ${(cause as Error).message}`);
   }
 
-  const fieldIssues = validateRecipeFields(recipeRaw);
+  const fieldIssues = validateRecipeFields(recipeRaw, validateOptions);
   const rawSectionsList = isRecord(sectionsRaw) ? sectionsRaw.sections : sectionsRaw;
   const sectionsResult = deriveSections(rawSectionsList);
 
@@ -83,9 +90,13 @@ export function loadRecipe(recipeDir: string): RecipeConfig {
     window: WindowConfig;
     scoring: ScoringConfig;
     caps: CapsConfig;
+    delivery: readonly DeliveryChannel[];
+    health: HealthConfig;
+    subject?: string;
   };
 
   return {
+    name: basename(recipeDir),
     language: recipe.language,
     topics: recipe.topics,
     model: recipe.model,
@@ -95,5 +106,8 @@ export function loadRecipe(recipeDir: string): RecipeConfig {
     window: recipe.window,
     scoring: recipe.scoring,
     caps: recipe.caps,
+    delivery: recipe.delivery,
+    health: recipe.health,
+    ...(recipe.subject !== undefined ? { subject: recipe.subject } : {}),
   };
 }
