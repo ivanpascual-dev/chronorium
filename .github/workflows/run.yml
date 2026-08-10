@@ -119,7 +119,29 @@ jobs:
         working-directory: .chronorium-tool
         # El código de salida se guarda como output, y el script no propaga el fallo: no se
         # aborta el job todavía (trampa #4). El paso no imprime el entorno ni ningún secreto (A4).
+        env:
+          # Los lectores `repo-search` y `repo-releases` piden la variable `GITHUB_TOKEN`
+          # (src/sources/repo-releases.ts). Sin ella, la API de GitHub atiende sin identificar: 60
+          # peticiones por hora contadas POR IP, y los runners comparten IP entre miles de trabajos
+          # ajenos, así que el cupo llega agotado y esas fuentes fallan días sueltos.
+          #
+          # El paso "Cargar los secretos" no puede resolverlo: salta `GITHUB_TOKEN` a propósito (el
+          # token automático de Actions puede escribir en el repositorio de la instancia, y no tiene
+          # por qué estar en el entorno del proceso que manipula contenido hostil, R1), y GitHub
+          # prohíbe crear secretos cuyo nombre empiece por `GITHUB_`. Por eso el nombre del secreto
+          # de la instancia es otro y se mapea aquí. Es el ÚNICO nombre de secreto que este fichero
+          # conoce, y solo porque el nombre de destino ya está fijado en el lector, no en la receta.
+          #
+          # Lo que la instancia debe guardar ahí es un token de grano fino SIN NINGÚN permiso: solo
+          # identifica, no abre nada. Es opcional: sin el secreto, la guarda de abajo lo borra.
+          GITHUB_TOKEN: ${{ secrets.GH_PUBLIC_READ_TOKEN }}
         run: |
+          # Un secreto ausente llega como cadena vacía, y los dos lectores solo comprueban que la
+          # variable exista (`!== undefined`), no que traiga algo: con la cadena vacía mandarían
+          # "Authorization: Bearer " y GitHub respondería 401. Ausente tiene que ser ausente.
+          if [ -z "${GITHUB_TOKEN}" ]; then
+            unset GITHUB_TOKEN
+          fi
           set +e
           node src/cli/main.ts run \
             --recipe ${{ inputs.recipe }} \
