@@ -104,8 +104,65 @@ test('un campo con label declarado se renderiza con su etiqueta; sin label, como
 
   const html = emailRenderer.render(report, genericSections);
 
-  assert.ok(html.includes('<strong>Veredicto:</strong> Bien'));
+  // La etiqueta declarada aparece tal cual (el estilo la pone en versales, no el marcado), y el
+  // nombre técnico del campo no aparece en ninguna parte.
+  assert.ok(html.includes('>Veredicto</p>'));
+  assert.ok(html.includes('>Bien</p>'));
   assert.ok(!html.includes('veredicto'));
+});
+
+test('el tono de cada línea sale de su posición, no de su nombre ni de su etiqueta (R12)', () => {
+  const cuatroCampos: readonly SectionSpec[] = [
+    {
+      key: 'alfa',
+      title: 'Sección Alfa',
+      cardinality: 'list',
+      min: 1,
+      max: 3,
+      condition: 'always',
+      fields: [
+        { name: 'titulo', type: 'string' },
+        { name: 'uno', type: 'string', label: 'Uno' },
+        { name: 'dos', type: 'string', label: 'Dos' },
+        { name: 'tres', type: 'string', label: 'Tres' },
+        { name: 'enlace', type: 'url' },
+      ],
+    },
+  ];
+
+  const report = buildReport({
+    recipe: makeRecipe({ sections: cuatroCampos }),
+    date: '2026-08-09',
+    generatedAt: '2026-08-09T08:00:00.000Z',
+    modelOutput: {
+      alfa: [
+        {
+          titulo: 'T',
+          uno: 'a',
+          dos: 'b',
+          tres: 'c',
+          enlace: 'https://real.example/uno',
+        },
+      ],
+    },
+    provider: 'google',
+    providerWasFallback: false,
+    linksDropped: 0,
+    itemsCollected: 5,
+    itemsAnalyzed: 5,
+    sourcesOk: 2,
+    sourcesFailed: 0,
+    health: noDegradation,
+  });
+
+  const html = emailRenderer.render(report, cuatroCampos);
+
+  for (const etiqueta of ['Uno', 'Dos', 'Tres']) {
+    assert.ok(html.includes(`>${etiqueta}</p>`), `falta la etiqueta ${etiqueta}`);
+  }
+  for (const nombre of ['"uno"', '>uno<', '>dos<', '>tres<']) {
+    assert.ok(!html.includes(nombre), `el nombre técnico ${nombre} no debe aparecer`);
+  }
 });
 
 test('RF-F05: una sección non-empty vacía no aparece en el correo', () => {

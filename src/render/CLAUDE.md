@@ -55,6 +55,13 @@ regla, compartida por `markdown.ts` y `email.ts`:
 4. Un campo vacío (el enlace que `validateLinks`, fase 3, descartó) no se imprime: ni un hueco, ni
    un `[texto]()` roto.
 
+**El aspecto también se decide por posición, nunca por nombre.** `email.ts` da a cada línea un tono
+(limpia, cálida, fría) según su **índice** en `fields`: la primera va sin fondo, y las siguientes
+alternan naranja y azul. Así una sección de tres campos de texto sale con el resumen plano, la
+opinión sobre naranja y lo accionable sobre azul sin que el renderizador sepa que existen esos
+conceptos. Si alguna vez te tienta mirar `field.name` o `field.label` para decidir un color, es el
+mismo error que R12 con otra cara.
+
 `item.ts` no aparece en la lista original de ficheros del plan de la fase 4: existe para que
 `report.ts` no tenga que importar `markdown.ts`/`email.ts` (que a su vez necesitan esta
 descomposición), lo que crearía un ciclo de imports. Ver `docs/bitacora.md`.

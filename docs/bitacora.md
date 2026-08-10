@@ -61,6 +61,38 @@ hacer: el código dice cómo quedó, pero no qué se intentó antes ni qué se d
 
 ## Entradas
 
+## 2026-08-10 · Fase 4 · El correo deja de ser HTML desnudo, y la estructura del elemento vuelve a la receta
+
+**Hecho.** `src/render/email.ts` reescrito: maquetación con tablas y estilos en línea (un cliente de
+correo no es un navegador: Outlook ignora las hojas incrustadas y la abreviatura `font:`), paleta
+«papel y tinta» (azul marino estructural, naranja quemado como único acento), cabecera con
+`recipe · date`, banda de aviso para la línea de estado de R9, ficha numerada por elemento de una
+sección `list`, bloque editorial con filete para una sección `one`, y pie con el metadato técnico en
+tokens. Sigue sin recurso externo alguno y sin conocer ninguna clave de sección (R12).
+
+**Decisión al construir, sin ADR propio.** El tono de cada línea de un elemento (limpia, cálida,
+fría) sale de su **posición declarada** en `fields`, nunca de su nombre ni de su etiqueta. En una
+sección de tres campos de texto eso pinta el resumen plano, la opinión sobre naranja y lo accionable
+sobre azul, que es la forma del sistema anterior, sin que el renderizador sepa que esos tres
+conceptos existen. Con dos campos, o con siete, sigue funcionando. Es la extensión natural de las
+cuatro reglas de `item.ts` al aspecto, y el test nuevo lo fija con etiquetas `Uno`/`Dos`/`Tres`.
+
+**Se desvió.** `recipes/example/sections.yaml` cambia con ello: la sección `top` pasa de
+`title`/`verdict`/`why` a `title`/`summary` («Qué ha pasado») /`verdict` («Opinión»). No es
+maquillaje del ejemplo: el dueño echaba en falta la estructura del Chronorium anterior (qué pasó,
+opinión sincera, qué haces con ello) y **esa estructura es dominio, no mecanismo**. El renderizador
+ya sabía pintarla; lo que no existía era la declaración. Queda decidido además que el «cómo lo
+aplico» desarrollado vive en la receta **semanal** (fase 5), no en la diaria: una acción que no
+ejecutas, repetida cada mañana, enseña a saltarse la sección. La diaria conserva `applicable`
+(máximo 3, `non-empty`) para lo táctico.
+
+**Deuda.** El aspecto está juzgado sobre una vista previa con contenido de mentira, no sobre un
+informe real entregado por Gmail: falta verlo en el cliente de correo de verdad (parte 2 de
+`scripts/probe-fase4.ts`, que sigue pendiente de credenciales SMTP). Y la receta semanal nace sin
+archivo del que destilar (ADR-019), así que su primer informe saldrá pobre.
+
+---
+
 ## 2026-08-10 · Fase 4 · Cierra la deuda de tests de `validate`/`doctor`
 
 **Hecho.** `tests/cli/validate.test.ts` (9 tests) y `tests/cli/doctor.test.ts` (9 tests), con el

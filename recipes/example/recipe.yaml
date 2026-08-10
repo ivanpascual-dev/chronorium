@@ -54,6 +54,13 @@ caps:
   maxItems: 60
   perSourceMaxPercent: 40
 
+# El asunto del correo. Dos sustituciones y solo dos: {recipe} (el nombre del directorio de la
+# receta) y {date} (la fecha del informe, AAAA-MM-DD). Todo lo demás es texto literal, así que el
+# nombre del agente se escribe aquí, no en el código: el motor no sabe cómo se llama tu agente.
+# Sin esta línea, el asunto queda en "<receta> · <fecha>", que no es prosa y por tanto no depende
+# del idioma de la receta.
+subject: 'Chronorium · {recipe} · {date}'
+
 # Cero canales activos es válido (RF-B04, RF-H04): un desconocido con solo la credencial del
 # modelo obtiene su informe en el archivo, y activa el correo (o cualquiera de los otros dos)
 # cuando quiera. Un informe archivado ya es un informe entregado.

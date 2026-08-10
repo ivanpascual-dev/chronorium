@@ -7,6 +7,12 @@
 import type { SectionSpec } from '../recipe/types.ts';
 import type { Report } from './types.ts';
 
+/** Una línea de texto ya lista para renderizar: con `label` si la receta lo declaró, sin él si no. */
+export interface StructuredLine {
+  readonly label?: string;
+  readonly value: string;
+}
+
 export interface StructuredItem {
   /** El primer campo declarado de la sección: el rótulo del elemento (T5, regla 1). */
   readonly label: string;
@@ -15,7 +21,7 @@ export interface StructuredItem {
   /** Los campos de tipo `url` siguientes al primero, como enlaces sueltos (regla 2). */
   readonly extraUrls: readonly string[];
   /** Los demás campos, en el orden declarado, ya sin los vacíos (reglas 3 y 4). */
-  readonly lines: readonly { readonly label?: string; readonly value: string }[];
+  readonly lines: readonly StructuredLine[];
 }
 
 /**
@@ -28,7 +34,7 @@ export function structureItem(section: SectionSpec, item: Record<string, string>
   const label = firstField !== undefined ? (item[firstField.name] ?? '') : '';
 
   const urlValues: string[] = [];
-  const lines: { readonly label?: string; readonly value: string }[] = [];
+  const lines: StructuredLine[] = [];
 
   for (const field of restFields) {
     const value = item[field.name];
