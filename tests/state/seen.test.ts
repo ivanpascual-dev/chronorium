@@ -152,6 +152,18 @@ test('la escritura es atómica: el fichero final nunca queda a medias', () => {
   assert.deepEqual(leftovers, []);
 });
 
+// H2/D2: una instancia recién clonada no trae `state/` (git no versiona directorios vacíos). La
+// primera ejecución no puede fallar con ENOENT por eso.
+test('saveSeen crea el directorio padre si falta (una instancia recién clonada no trae state/)', () => {
+  const dir = makeDir();
+  const path = join(dir, 'state', 'seen--daily.json');
+  const state = markSeen({ schemaVersion: 1, windowDays: 30, entries: [] }, [item()], now);
+
+  saveSeen(path, state);
+
+  assert.ok(existsSync(path));
+});
+
 test('guardar y volver a cargar produce el mismo estado', () => {
   const dir = makeDir();
   const path = join(dir, 'seen.json');

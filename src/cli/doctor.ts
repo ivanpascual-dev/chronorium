@@ -1,6 +1,6 @@
-import { join } from 'node:path';
 import { resolveDataRoot, resolveRecipeDir, resolveRecipesRoot } from '../paths.ts';
 import { loadRecipe, RecipeLoadError } from '../recipe/load.ts';
+import { statePaths } from '../state/paths.ts';
 import { readHealth } from '../state/runs.ts';
 
 function errorMessage(cause: unknown): string {
@@ -74,7 +74,7 @@ export async function cliDoctor(
     throw cause;
   }
 
-  const runsPath = join(dataRoot, 'runs.ndjson');
+  const { runsPath } = statePaths(dataRoot, recipe.name);
   const health = readHealth(runsPath, recipe.health.windowDays, new Date(), recipe.name);
   const total = health.runsOk + health.runsFailed;
 

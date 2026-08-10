@@ -1,5 +1,5 @@
-import { appendFileSync, readFileSync } from 'node:fs';
-import { isAbsolute } from 'node:path';
+import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { dirname, isAbsolute } from 'node:path';
 import type { ReportHealth } from '../render/types.ts';
 import type { RunRecord, RunResult } from './types.ts';
 
@@ -19,9 +19,12 @@ function requireAbsolute(path: string): void {
 }
 
 /** Se añade, nunca se reescribe: una línea corta, `appendFileSync` basta (no hace falta `fsync` de
- * directorio, RF-C06 lo garantiza el workflow de la fase 5, no hay dos escritores aquí). */
+ * directorio, RF-C06 lo garantiza el workflow de la fase 5, no hay dos escritores aquí). Crea su
+ * directorio padre si falta: una instancia recién clonada no trae `state/` (H2, git no versiona
+ * directorios vacíos). */
 export function appendRun(path: string, record: RunRecord): void {
   requireAbsolute(path);
+  mkdirSync(dirname(path), { recursive: true });
   appendFileSync(path, `${JSON.stringify(record)}\n`, 'utf8');
 }
 

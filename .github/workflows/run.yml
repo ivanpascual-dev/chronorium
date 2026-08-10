@@ -1,0 +1,158 @@
+# El workflow reutilizable que las instancias privadas invocan (docs/02-arquitectura.md,
+# ADR-014). Este repositorio no se ejecuta nunca para nadie: se invoca. La instancia es quien
+# tiene el cron, los secretos y los datos.
+#
+# Contratos que fija esta fase (docs/plans/fase-5-ejecucion-programada.md):
+#   - state/seen--<receta>.json es por receta; state/runs.ndjson es por instancia (ADR-021).
+#   - el grupo de concurrencia es por instancia (github.repository), nunca por receta (RF-C06).
+#   - el commit y el push ocurren antes del paso que decide si el job falla (contrato #6).
+#   - los inputs recipe/recipes-root/data-root son API pública desde la primera etiqueta
+#     consumida (ADR-014): quitar uno rompe instancias ajenas.
+#
+# T0 (verificado contra la documentación de GitHub Actions del 2026-08-10, no de memoria):
+#   - el checkout de este mismo repositorio, pinado a la referencia exacta que el llamador puso
+#     en su "uses:", usa el contexto `job.workflow_repository`/`job.workflow_sha` (no
+#     `github.workflow_sha`, que en un reusable workflow refleja al workflow de nivel superior).
+#   - los secretos llegan con `secrets: inherit` en el llamador: es la única vía que respeta que
+#     el NOMBRE de cada variable lo declare la receta (ADR-018), no este fichero.
+#   - `github.repository`, dentro de un reusable workflow, es el del llamador: es lo que hace que
+#     el grupo de concurrencia sea por instancia sin que este fichero conozca su nombre.
+
+name: Ejecutar receta
+
+on:
+  workflow_call:
+    inputs:
+      recipe:
+        description: 'Nombre de la receta a ejecutar (carpeta bajo recipes-root).'
+        required: true
+        type: string
+      recipes-root:
+        description: 'Raíz de las recetas de la instancia, relativa al espacio de trabajo.'
+        required: false
+        type: string
+        default: recipes
+      data-root:
+        description: 'Raíz de los datos de la instancia (archive/, state/), relativa al espacio de trabajo.'
+        required: false
+        type: string
+        default: '.'
+
+concurrency:
+  # Por instancia, no por receta (RF-C06): la diaria y la semanal del lunes se serializan, nunca
+  # corren a la vez. Cancelar una ejecución a medias es perder el informe (trampa #2 del plan).
+  group: chronorium-run-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  ejecutar-receta:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout de la instancia
+        id: checkout-instancia
+        uses: actions/checkout@v7
+
+      - name: Checkout de la herramienta, fijada a la referencia que el llamador pinó (A6)
+        id: checkout-herramienta
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .chronorium-tool
+
+      - name: Node, en la versión que declara engines de la herramienta (RF-A10)
+        id: setup-node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .chronorium-tool/package.json
+
+      - name: pnpm, en la versión que declara la herramienta
+        id: setup-pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: .chronorium-tool/package.json
+
+      - name: Instalar las dependencias de la herramienta
+        id: install
+        working-directory: .chronorium-tool
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolver rutas absolutas desde el espacio de trabajo (RF-A07)
+        id: rutas
+        run: |
+          echo "recipes-root=${GITHUB_WORKSPACE}/${{ inputs.recipes-root }}" >> "$GITHUB_OUTPUT"
+          echo "data-root=${GITHUB_WORKSPACE}/${{ inputs.data-root }}" >> "$GITHUB_OUTPUT"
+
+      - name: Cargar los secretos de la instancia en el entorno, sin imprimirlos (D3, A4)
+        id: secretos
+        env:
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+        run: |
+          node -e '
+            const { appendFileSync } = require("node:fs");
+            const secrets = JSON.parse(process.env.SECRETS_JSON);
+            const envFile = process.env.GITHUB_ENV;
+            for (const [key, value] of Object.entries(secrets)) {
+              if (key === "GITHUB_TOKEN" || typeof value !== "string" || value.length === 0) {
+                continue;
+              }
+              console.log(`::add-mask::${value}`);
+              const delimiter = `CHRONORIUM_${key}_${Math.random().toString(36).slice(2)}`;
+              appendFileSync(envFile, `${key}<<${delimiter}\n${value}\n${delimiter}\n`);
+            }
+          '
+
+      - name: validate --recipe (sin red, falla rápido, RF-D04)
+        id: validar
+        working-directory: .chronorium-tool
+        run: >
+          node src/cli/main.ts validate
+          --recipe ${{ inputs.recipe }}
+          --recipes-root ${{ steps.rutas.outputs.recipes-root }}
+          --data-root ${{ steps.rutas.outputs.data-root }}
+
+      - name: run --recipe
+        id: ejecutar
+        working-directory: .chronorium-tool
+        # El código de salida se guarda como output, y el script no propaga el fallo: no se
+        # aborta el job todavía (trampa #4). El paso no imprime el entorno ni ningún secreto (A4).
+        run: |
+          set +e
+          node src/cli/main.ts run \
+            --recipe ${{ inputs.recipe }} \
+            --recipes-root ${{ steps.rutas.outputs.recipes-root }} \
+            --data-root ${{ steps.rutas.outputs.data-root }}
+          echo "exit-code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Commit y push de archive/ y state/, si hay cambios (RF-G03, RF-C04)
+        id: commit
+        run: |
+          cd "${{ steps.rutas.outputs.data-root }}"
+          git add archive state
+          if git diff --cached --quiet; then
+            echo "sin cambios, nada que commitear (relanzado el mismo día: skipped_existing)"
+          else
+            git config user.name 'chronorium'
+            git config user.email 'actions@users.noreply.github.com'
+            git commit -m "chore: informe de ${{ inputs.recipe }}"
+            git push
+          fi
+
+      - name: doctor --recipe (el patrón, no solo el evento; RF-G04, RF-G05, R9)
+        id: doctor
+        working-directory: .chronorium-tool
+        run: >
+          node src/cli/main.ts doctor
+          --recipe ${{ inputs.recipe }}
+          --recipes-root ${{ steps.rutas.outputs.recipes-root }}
+          --data-root ${{ steps.rutas.outputs.data-root }}
+
+      - name: Salir con el código que devolvió run (RF-G06, contrato #6)
+        id: salir
+        # "always()": el job tiene que reflejar el código de "run" aunque "doctor" ya lo haya
+        # marcado como fallido por su cuenta (R9); el commit ya ocurrió antes de este paso.
+        if: always()
+        run: exit ${{ steps.ejecutar.outputs.exit-code }}

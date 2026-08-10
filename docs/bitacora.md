@@ -61,6 +61,61 @@ hacer: el código dice cómo quedó, pero no qué se intentó antes ni qué se d
 
 ## Entradas
 
+## 2026-08-10 · Fase 5 · El reutilizable, la memoria por receta (ADR-021), y dónde para esta sesión
+
+**Hecho.** T0-T4 del plan: los cinco hallazgos de la plataforma verificados contra la documentación
+de GitHub Actions del día (no de memoria); H1 (la semanal vería cero elementos siempre) reproducido
+como test en rojo y corregido: `state/seen--<receta>.json` por receta, `state/runs.ndjson` sigue
+siendo uno por instancia (ADR-021); H2 corregido (`appendRun`/`saveSeen` crean `state/` si falta;
+`src/state/paths.ts` como única función que compone las rutas, R10); H3 corregido (el identificador
+de cliente lleva la URL real del repositorio). `.github/workflows/run.yml` escrito y probado por
+forma (`tests/workflow/run-workflow.test.ts`, 13 casos): concurrencia por instancia
+(`github.repository`, nunca por receta), el checkout de la herramienta pinado a
+`job.workflow_repository`/`job.workflow_sha` (no a `main`, no a `github.workflow_sha`, que dentro de
+un reusable apunta al workflow de nivel superior), los secretos por `secrets: inherit` con cada
+valor enmascarado explícitamente antes de exportarlo a `$GITHUB_ENV`, y el commit/push antes del
+paso que decide si el job falla. 336 tests en verde, `typecheck`, `build`, `lint`, `bateria`,
+`check:receta-ejemplo` y `check:sin-datos-personales` limpios.
+
+**Se desvió.** El plan (`docs/plans/fase-5-ejecucion-programada.md`, "Ficheros que se tocan") no
+listaba `tests/state/paths.test.ts`, `tests/state/runs.test.ts`, `tests/cli/doctor.test.ts` ni
+`tests/security/bateria.test.ts` como modificados, solo `tests/cli/run.test.ts` y
+`tests/state/seen.test.ts`. Los cuatro necesitaban tocarse igual: `doctor.test.ts` y
+`bateria.test.ts` escribían/leían `runs.ndjson` en la raíz del directorio de datos a mano, y se
+habrían quedado en rojo por la razón equivocada (una ruta vieja, no la garantía que T1 quería
+probar) si no se actualizaban; `paths.test.ts` es la prueba directa y sin red de la única función
+nueva (`statePaths`), que R13 pide para lógica pura y que el plan omitió del listado por lo que
+parece un descuido, no una decisión. Ninguno cambia ningún contrato del plan.
+
+**Costó más de lo previsto.** T0 llevó más investigación de la que su propio texto sugiere: la
+respuesta a "qué repositorio hace checkout por defecto" no está en `github.workflow_sha` (que
+documentación y ejemplos mencionan primero) sino en el contexto `job` (`job.workflow_repository`/
+`job.workflow_sha`), que es una superficie más nueva y menos citada. Y "si `toJSON(secrets)` se
+enmascara automáticamente" no tiene una garantía documentada explícita para valores que pasan por
+una transformación (como serializar a JSON y volver a parsear); la respuesta prudente fue no confiar
+en el enmascarado automático y añadir `::add-mask::` por valor antes de exportarlo, aunque el coste
+en líneas de YAML sea mayor.
+
+**Deuda, deliberada y fuera de este árbol.** T5-T9 del plan (repositorio privado de la instancia,
+recetas reales, secretos, la primera ejecución de verdad, el rodaje en sombra de varios días, y
+apagar el sistema anterior) son trabajo del dueño con datos y credenciales reales, en un repositorio
+que este árbol no contiene y que esta sesión no puede tocar ni simular de forma honesta. `ops.md`
+solo marca la primera casilla de la fase 5 ("workflow reutilizable, con grupo de concurrencia").
+`docs/arranque.md` (sección 7) queda sin actualizar a propósito: el plan la liga a T5, a lo que la
+instancia "resulte ser de verdad", y escribirla antes tendría el mismo riesgo que el proyecto
+anterior ya pagó (documentación que promete una forma que el mundo real no tiene). La fase **no
+está cerrada**: falta que el dueño construya T5-T9 y confirme el criterio de terminada (los ocho
+puntos del plan, no solo T0-T4), antes de `@fiel-al-plan` y `/verifier`.
+
+**Aprendido.** La verificación "contra la documentación del día, no de memoria" que la constitución
+pide para dependencias de npm aplica igual de bien a las Actions de terceros: `pnpm/action-setup`
+sigue viva pero su sucesora recomendada hoy es `pnpm/setup`, y los majors de `actions/checkout` y
+`actions/setup-node` ya vigentes (v7 y v6) no son los que `ci.yml` fijó en una fase anterior (v4).
+Se decidió pinar `run.yml` a las versiones vigentes hoy en vez de copiar los pins de `ci.yml` por
+inercia, aceptando la inconsistencia entre los dos workflows como el coste correcto: `ci.yml` no
+formaba parte del alcance de esta fase, y bajar sus pins sin que nadie lo pidiera habría sido tocar
+algo que el plan no mencionó.
+
 ## 2026-08-10 · Fase 4 · El correo deja de ser HTML desnudo, y la estructura del elemento vuelve a la receta
 
 **Hecho.** `src/render/email.ts` reescrito: maquetación con tablas y estilos en línea (un cliente de

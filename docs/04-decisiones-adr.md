@@ -710,3 +710,53 @@ justificar que Telegram se quede aunque no se use.
 - `tests/deliver/email.test.ts` incluye el caso de un error de SMTP simulado cuyo mensaje contiene
   usuario y contraseña, y comprueba que ninguno de los dos llega al resultado que el orquestador anota
   en `runs.ndjson` ni al informe.
+
+---
+
+## ADR-021 · La memoria de lo ya mostrado es por receta; el registro de ejecuciones sigue siendo por instancia
+
+**Estado:** aceptado
+
+**Contexto.** Planificando la fase 5 (ejecución programada), con dos recetas reales por primera vez
+sobre la misma instancia (la diaria y un resumen semanal que la destila por la fuente `archive`), se
+encontró H1: `state/seen.json` es un único fichero por instancia, sin distinguir qué receta marcó cada
+huella. La semanal lee, por la fuente `archive`, los informes que la propia diaria ya publicó; esos
+elementos llevan la misma url y el mismo título que la diaria ya marcó como vistos, así que
+`runPipeline` los descarta enteros en su filtro de memoria. Resultado: la receta semanal vería cero
+elementos supervivientes cada vez que se ejecutara, sobre el camino nominal, no un caso límite.
+
+**Decisión.** La memoria de lo ya mostrado pasa a ser un fichero por receta:
+`state/seen--<receta>.json`, con el mismo criterio de nombre que ya usa el archivo
+(`YYYY-MM-DD--<receta>.json`, `docs/03-modelo-datos.md`) y por el mismo motivo: dos recetas escriben
+en la misma instancia y no pueden pisarse. `state/runs.ndjson` **no se toca**: sigue siendo un único
+fichero para todas las recetas de la instancia. `readHealth` ya filtra por receta (fase 4), y un
+registro único es lo que responde "¿cuántos días hubo informe?" para toda la instancia sin comparar
+ficheros (RF-G04).
+
+Una sola función compone las dos rutas (`statePaths(dataRoot, recipe)` en `src/state/paths.ts`, R10):
+`cli/run.ts` y `cli/doctor.ts` la consumen, y ninguno de los dos vuelve a decidir por su cuenta dónde
+vive cada fichero.
+
+**Alternativas consideradas y por qué no:**
+
+1. **Un campo en la receta para desactivar la memoria** (`memory: false` en la semanal). Mete en el
+   dominio una decisión que es del mecanismo: la semanal sí quiere memoria, quiere la suya, para no
+   repetir en el resumen del lunes lo que ya resumió el lunes anterior.
+2. **Que la fuente `archive` marque sus elementos como exentos de memoria.** Sería el lector
+   decidiendo sobre la memoria: dos capas conociéndose que hoy no se conocen.
+3. **Mantener un solo fichero y filtrar por receta dentro.** Es la opción 1 con más pasos, y además deja
+   que una receta pueda podar (por `windowDays`) la memoria de otra al guardar con su propia ventana.
+
+**Consecuencia que hay que asumir por escrito.** La receta semanal repetirá enlaces que ya salieron en
+la diaria, y eso es lo que se quiere: un resumen semanal que solo pudiera hablar de lo que la diaria no
+contó no sería un resumen, sería una segunda diaria.
+
+**Consecuencias de código:**
+
+- `src/state/paths.ts` (nuevo): `statePaths(dataRoot, recipe)` devuelve `seenPath` y `runsPath`.
+- `src/cli/run.ts` y `src/cli/doctor.ts` dejan de componer las rutas de estado a mano y consumen
+  `statePaths`.
+- `src/state/runs.ts` (`appendRun`) y `src/state/seen.ts` (`saveSeen`) crean su directorio padre si
+  falta: `state/` es ahora un subdirectorio, y una instancia recién clonada no lo trae (git no
+  versiona directorios vacíos).
+- `docs/03-modelo-datos.md` documenta `state/seen--<receta>.json` en vez de `state/seen.json`.

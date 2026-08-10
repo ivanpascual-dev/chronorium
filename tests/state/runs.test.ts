@@ -159,3 +159,14 @@ test('appendRun y readHealth exigen una ruta absoluta (RF-A07)', () => {
   assert.throws(() => appendRun('runs.ndjson', record()), RunsPathError);
   assert.throws(() => readHealth('runs.ndjson', 30, new Date()), RunsPathError);
 });
+
+// H2/D2: una instancia recién clonada no trae `state/` (git no versiona directorios vacíos). La
+// primera ejecución no puede fallar con ENOENT por eso.
+test('appendRun crea el directorio padre si falta (una instancia recién clonada no trae state/)', () => {
+  const path = join(makeDir(), 'state', 'runs.ndjson');
+
+  appendRun(path, record());
+
+  const lines = readFileSync(path, 'utf8').trim().split('\n');
+  assert.equal(lines.length, 1);
+});

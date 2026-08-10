@@ -63,11 +63,11 @@ test('camino feliz: archiva, marca seen, entrega, y sale con 0', async () => {
   assert.equal(result.exitCode, 0);
   assert.equal(result.result, 'ok');
   assert.equal(delivered, true);
-  assert.ok(
-    existsSync(join(dataRoot, 'archive', `2026-08-09--${recipeDir.split('/').pop()}.json`)),
-  );
-  assert.ok(existsSync(join(dataRoot, 'seen.json')));
-  assert.ok(existsSync(join(dataRoot, 'runs.ndjson')));
+  const recipeName = recipeDir.split('/').pop();
+  assert.ok(existsSync(join(dataRoot, 'archive', `2026-08-09--${recipeName}.json`)));
+  // Rutas exactas de H2/D2: `state/` es un directorio, y la memoria lleva el nombre de la receta.
+  assert.ok(existsSync(join(dataRoot, 'state', `seen--${recipeName}.json`)));
+  assert.ok(existsSync(join(dataRoot, 'state', 'runs.ndjson')));
 });
 
 test('receta inválida (delivery mal declarado) ⇒ código 1', async () => {
@@ -242,7 +242,9 @@ test('el informe de hoy ya archivado ⇒ no se llama al modelo, y se sale con 0 
   assert.equal(result.result, 'skipped_existing');
   assert.equal(modelCalled, false);
 
-  const lines = readFileSync(join(dataRoot, 'runs.ndjson'), 'utf8').trim().split('\n');
+  const lines = readFileSync(join(dataRoot, 'state', 'runs.ndjson'), 'utf8')
+    .trim()
+    .split('\n');
   assert.equal(JSON.parse(lines[lines.length - 1] ?? '').result, 'skipped_existing');
 });
 
@@ -263,7 +265,10 @@ test('RF-C01: seen.json se marca con lo que salió en el informe, no con lo reco
     notifierRegistry: fakeNotifierRegistry(async () => {}),
   });
 
-  const seen = JSON.parse(readFileSync(join(dataRoot, 'seen.json'), 'utf8')) as {
+  const recipeName = recipeDir.split('/').pop();
+  const seen = JSON.parse(
+    readFileSync(join(dataRoot, 'state', `seen--${recipeName}.json`), 'utf8'),
+  ) as {
     entries: readonly unknown[];
   };
   // La sección "pulse" no lleva ningún campo url ni coincide con item.url: nada se marca (el
@@ -286,6 +291,152 @@ test('una ruta de datos relativa se rechaza, no se resuelve contra el directorio
       userAgent: 'test/1.0',
     }),
   );
+});
+
+// H1/D1/ADR-021: la memoria de lo ya mostrado es por receta, no por instancia. Dos recetas sobre
+// el mismo `dataRoot` no pueden pisarse la una a la otra: la semanal destila la diaria por la
+// fuente `archive`, y el elemento que saca tiene la misma url y el mismo título que la diaria ya
+// marcó como visto. Con un solo `seen.json` compartido, `runPipeline` lo descartaría entero.
+const ITEMS_SECTIONS_YAML = `
+sections:
+  - key: items
+    title: Elementos
+    cardinality: list
+    min: 0
+    max: 10
+    condition: non-empty
+    fields:
+      - { name: title, type: string }
+      - { name: link, type: url }
+`;
+
+function distillingRecipeYaml(overrides: { readonly sourceRecipe?: string } = {}): string {
+  return `
+language: es
+topics: [pruebas]
+model: { provider: test-provider, id: test-model }
+sources:
+  - id: destilado
+    type: archive
+    ${overrides.sourceRecipe !== undefined ? `recipe: ${overrides.sourceRecipe}` : ''}
+window: { days: 30 }
+scoring: { recencyWeight: 1, topicsWeight: 1 }
+caps: { maxItems: 10, perSourceMaxPercent: 100 }
+delivery: []
+health: { windowDays: 30, runFailureThreshold: 0.5, sourceFailureThreshold: 0.5 }
+`;
+}
+
+test('H1: la receta semanal ve, por la fuente archive, lo que la diaria ya marcó como visto', async () => {
+  const dailyDir = makeRecipeDir({ sectionsYaml: ITEMS_SECTIONS_YAML, name: 'daily-fuente-' });
+  const dailyName = dailyDir.split('/').pop() as string;
+  const dataRoot = makeDataRoot();
+
+  const dailyResult = await runOnce({
+    recipeDir: dailyDir,
+    dataRoot,
+    dryRun: false,
+    now: NOW,
+    secret: secretWithModelKey,
+    sourceFetch: fakeSourceFetch(),
+    deliverFetch: neverDeliverFetch(),
+    userAgent: 'test/1.0',
+    providerRegistry: fakeProviderRegistry(
+      mockModel(
+        JSON.stringify({ items: [{ title: 'Elemento uno', link: 'https://example.com/uno' }] }),
+      ),
+    ),
+    notifierRegistry: noopNotifierRegistry(),
+  });
+  assert.equal(dailyResult.result, 'ok');
+
+  const weeklyDir = makeRecipeDir({
+    recipeYaml: distillingRecipeYaml({ sourceRecipe: dailyName }),
+    sectionsYaml: ITEMS_SECTIONS_YAML,
+    name: 'weekly-destila-',
+  });
+
+  const weeklyResult = await runOnce({
+    recipeDir: weeklyDir,
+    dataRoot,
+    dryRun: false,
+    now: NOW,
+    secret: secretWithModelKey,
+    sourceFetch: emptySourceFetch(),
+    deliverFetch: neverDeliverFetch(),
+    userAgent: 'test/1.0',
+    providerRegistry: fakeProviderRegistry(mockModel(JSON.stringify({ items: [] }))),
+    notifierRegistry: noopNotifierRegistry(),
+  });
+
+  // El elemento que la diaria publicó tiene que sobrevivir al filtro de memoria de la semanal:
+  // son recetas distintas, cada una con su propia huella de lo ya visto (ADR-021).
+  assert.equal(weeklyResult.report?.meta.itemsAnalyzed, 1);
+});
+
+test('la memoria por receta no deja de proteger a la propia receta: una segunda ejecución de la misma receta no vuelve a ver lo que ella misma publicó', async () => {
+  const recipeDir = makeRecipeDir({ sectionsYaml: ITEMS_SECTIONS_YAML, name: 'auto-memoria-' });
+  const dataRoot = makeDataRoot();
+  const day1 = new Date('2026-08-09T12:00:00.000Z');
+  const day2 = new Date('2026-08-10T12:00:00.000Z');
+
+  const providerRegistry = fakeProviderRegistry(
+    mockModel(
+      JSON.stringify({ items: [{ title: 'Elemento uno', link: 'https://example.com/uno' }] }),
+    ),
+  );
+
+  const first = await runOnce({
+    recipeDir,
+    dataRoot,
+    dryRun: false,
+    now: day1,
+    secret: secretWithModelKey,
+    sourceFetch: fakeSourceFetch(),
+    deliverFetch: neverDeliverFetch(),
+    userAgent: 'test/1.0',
+    providerRegistry,
+    notifierRegistry: noopNotifierRegistry(),
+  });
+  assert.equal(first.report?.meta.itemsAnalyzed, 1);
+
+  const second = await runOnce({
+    recipeDir,
+    dataRoot,
+    dryRun: false,
+    now: day2,
+    secret: secretWithModelKey,
+    sourceFetch: fakeSourceFetch(),
+    deliverFetch: neverDeliverFetch(),
+    userAgent: 'test/1.0',
+    providerRegistry,
+    notifierRegistry: noopNotifierRegistry(),
+  });
+
+  assert.equal(second.report?.meta.itemsAnalyzed, 0);
+});
+
+test('H2/D2: un directorio de datos recién clonado, sin state/, no falla y lo crea', async () => {
+  const recipeDir = makeRecipeDir({});
+  const dataRoot = makeDataRoot();
+  const recipeName = recipeDir.split('/').pop();
+
+  const result = await runOnce({
+    recipeDir,
+    dataRoot,
+    dryRun: false,
+    now: NOW,
+    secret: secretWithModelKey,
+    sourceFetch: fakeSourceFetch(),
+    deliverFetch: neverDeliverFetch(),
+    userAgent: 'test/1.0',
+    providerRegistry: fakeProviderRegistry(mockModel(JSON.stringify({ pulse: { text: 'x' } }))),
+    notifierRegistry: noopNotifierRegistry(),
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.ok(existsSync(join(dataRoot, 'state', `seen--${recipeName}.json`)));
+  assert.ok(existsSync(join(dataRoot, 'state', 'runs.ndjson')));
 });
 
 // Los cinco códigos de salida, ejercitando el proceso de verdad como hijo (T10): un valor de

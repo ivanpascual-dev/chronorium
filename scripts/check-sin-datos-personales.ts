@@ -14,6 +14,13 @@ import { join } from 'node:path';
 const SRC_DIR = 'src';
 const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 
+// El identificador de cliente (RF-B08, src/cli/run.ts) lleva la URL del propio repositorio
+// público. No es una fuga: esa URL ya es pública, es el "git remote" de este mismo repositorio.
+// Colisiona con PERSONAL_TERMS solo porque el usuario de GitHub del dueño contiene su nombre como
+// subcadena. Se excluye por su valor exacto antes de comparar, sin tocar PERSONAL_TERMS (que debe
+// seguir siendo estricto para los casos reales).
+const PUBLIC_EXCEPTIONS = ['https://github.com/ivanpascual-dev/chronorium'];
+
 function loadTerms(): string[] {
   const raw = process.env.PERSONAL_TERMS ?? '';
   return raw
@@ -39,8 +46,12 @@ function main(): void {
       for (const email of line.match(EMAIL_PATTERN) ?? []) {
         hallazgos.push(`${file}:${index + 1} · correo: ${email}`);
       }
+      const lineWithoutExceptions = PUBLIC_EXCEPTIONS.reduce(
+        (acc, exception) => acc.split(exception).join(''),
+        line,
+      );
       for (const term of terms) {
-        if (line.toLowerCase().includes(term.toLowerCase())) {
+        if (lineWithoutExceptions.toLowerCase().includes(term.toLowerCase())) {
           hallazgos.push(`${file}:${index + 1} · termino prohibido: "${term}"`);
         }
       }

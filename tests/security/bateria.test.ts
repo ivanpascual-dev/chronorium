@@ -453,7 +453,10 @@ health: { windowDays: 30, runFailureThreshold: 0.5, sourceFailureThreshold: 0.5 
   assert.equal(result.result, 'delivery_failed');
 
   const lastRunLine =
-    readFileSync(join(dataRoot, 'runs.ndjson'), 'utf8').trim().split('\n').pop() ?? '';
+    readFileSync(join(dataRoot, 'state', 'runs.ndjson'), 'utf8')
+      .trim()
+      .split('\n')
+      .pop() ?? '';
   assert.ok(!lastRunLine.includes(SECRET_PASSWORD));
   assert.ok(!lastRunLine.includes(SECRET_USER));
 
