@@ -397,7 +397,7 @@ receta**, jamás inspeccionando su URL. Esa inspección fue la causa raíz aquí
 
 ## ADR-013 · El archivo anterior se importa tal cual, con marca de versión
 
-**Estado:** aceptado
+**Estado:** superseded por ADR-019
 
 **Contexto.** Existen 45 briefings del sistema anterior. Siete de ellos son de un formato de boletín
 semanal previo a junio de 2026, con campos que ya no existen.
@@ -606,3 +606,107 @@ el nombre que le da cada API.
 - `recipe/validate.ts` valida el tipo de `reasoningEffort` para cualquier `provider`, sin restringirlo
   a `openai`/`google` (mismo criterio que ya usa con `baseUrl` en ese validador): si se declara en
   `openai-compatible`, valida pero no tiene efecto, porque ese conector no lo interpreta.
+
+---
+
+## ADR-019 · El archivo nace vacío. No se importan los 45 informes anteriores
+
+**Estado:** aceptado · supersede a ADR-013
+
+**Contexto.** ADR-013 decidió importar los 45 briefings del sistema anterior tal cual, con marca de
+versión de esquema, para que la receta semanal (que destila el archivo diario) tuviera historial
+desde el primer día. Al planificar la fase 4, con el escritor del archivo por construir de verdad, el
+dueño decidió lo contrario: prefiere que todo lo que exista en su instancia lo haya generado este
+proyecto, sin arrastrar datos del sistema que se está reemplazando.
+
+**Decisión.** No se construye ningún conversor ni importador. El archivo de cada instancia empieza
+vacío el día que se activa esta herramienta.
+
+**Consecuencias, que hay que asumir por escrito porque ADR-013 ya las había resuelto:**
+
+1. **La receta semanal nace sin historial.** Era el argumento concreto de ADR-013: con la importación
+   funciona desde la primera semana en vez de esperar siete días. Sin ella, el primer resumen semanal
+   saldrá pobre o vacío hasta que el archivo propio acumule varios días de informes diarios.
+2. **`extractSchemaV1` de `src/sources/archive.ts` se queda sin ningún productor real.** No se retira:
+   `RF-C05` sigue vigente (el lector del archivo tolera formatos anteriores identificados por su marca
+   de versión, y el salto de `schemaVersion` 2 a 3 ocurrirá algún día), y ya está construido y probado.
+   Lo que cambia es que deja de haber datos de la versión 1 en el mundo real; queda anotado aquí para
+   que nadie los busque ni interprete su presencia en el código como una importación pendiente.
+
+**Por qué no es una regresión.** El coste (una semana de resumen pobre) es pequeño y se paga una sola
+vez por instancia nueva. El beneficio es no mezclar en el historial de la herramienta datos generados
+por un sistema que ya no existe, y que su formato o su tono no coincidan con lo que esta herramienta
+produce.
+
+---
+
+## ADR-020 · Entrega de correo por SMTP con `nodemailer`, y el webhook entra desactivado
+
+**Estado:** aceptado
+
+**Contexto.** La fase 4 necesita un notificador de correo. `docs/02-arquitectura.md` promete tres
+canales (correo, Telegram, webhook); D1 (decisión tomada con el dueño antes de escribir el plan de la
+fase) fija SMTP en vez de una API HTTP de envío (Resend y similares, que habría sido cero
+dependencias): el dueño usa Gmail y quiere seguir usándolo, con contraseña de aplicación.
+
+**Auditoría de `nodemailer` (`@dependency-audit`, 2026-08-09), lo que decide, no el recuento de
+dependencias.** `nodemailer@9.0.5`: cero dependencias de ejecución, licencia `MIT-0`,
+`engines.node >= 6` (sin conflicto con el `>=24.0.0` de este proyecto). `@types/nodemailer@8.0.1`:
+única dependencia `@types/node`, ya presente.
+
+Dos patrones reales encontrados, ninguno al nivel del precedente que paró la fase 2
+(`fast-xml-parser`: tres arreglos incompletos sobre el mismo bug en dos semanas, más siete
+subdependencias nuevas de un único mantenedor):
+
+1. **Inyección en cabeceras MIME vía CRLF, con parches repetidos sobre el mismo mecanismo** entre las
+   versiones 8.0.5 y 9.0.5 (`GHSA-268h-hp4c-crq3`, `GHSA-vvjj-xcjg-gr5g`, y varios endurecimientos más
+   en la serie 9.0.1-9.0.5): caracteres de control en cabeceras, IDs de mensaje, direcciones,
+   etiquetas DKIM. Todos corregidos en la versión que se instala hoy, pero es exactamente el mecanismo
+   que este proyecto trata como amenaza real (R1: el contenido de las fuentes, y lo que el modelo
+   sintetiza a partir de él, es entrada hostil).
+2. **Bypass repetido de `disableFileAccess`/`disableUrlAccess`** por dos rutas de código distintas en
+   tres semanas (`GHSA-wqvq-jvpq-h66f`, `GHSA-p6gq-j5cr-w38f`). No aplica si el proyecto no usa `raw`
+   ni `jsonTransport`, que es la decisión que se toma aquí.
+3. Mantenimiento: un solo mantenedor con permisos de publicación, pero activo (última publicación dos
+   días antes de esta auditoría, un solo issue abierto sobre 17.6k estrellas). No es un patrón de
+   abandono.
+
+**Decisión.** Instalar `nodemailer` y `@types/nodemailer`, sin pin de major (se instalan sin fijar
+versión y quedan congelados en el lockfile, igual que el resto de dependencias que se mueven rápido).
+Con tres garantías de código, no de configuración, coherentes con R2:
+
+1. **Nunca se usan las opciones `raw` a nivel de mensaje ni `jsonTransport`.** Es la superficie de los
+   dos bypasses de la amenaza 2, y este proyecto no tiene ningún caso de uso que las necesite.
+2. **Todo campo derivado de la receta o del informe que llegue a una cabecera de correo (`subject`,
+   nombre de remitente) se sanea contra `\r`, `\n` y `\0` en `src/deliver/email.ts` antes de pasarlo a
+   `nodemailer`**, en vez de confiar solo en el saneado interno de la librería. Es la misma doctrina
+   que ya aplica a los enlaces (ADR-010): lo que impone el código es una garantía, lo que corrige una
+   librería de terceros es una capa adicional, no la única.
+3. **Ningún error propagado por el notificador de correo puede contener el valor de una credencial.**
+   `nodemailer` no ecoa la contraseña en sus errores de `EAUTH` (la respuesta SMTP de fallo de
+   autenticación no la incluye), pero el mensaje de error sí puede incluir el usuario y, según el
+   servidor, fragmentos de la configuración de conexión. El notificador sustituye cualquier valor de
+   secreto conocido (`ctx.secret(...)`) que aparezca en el mensaje de error antes de devolverlo, no
+   confía en que la librería o el servidor remoto nunca lo incluyan.
+
+**Transporte genérico, no el atajo `service: 'gmail'`.** La documentación de `nodemailer` ofrece un
+atajo (`service: 'gmail'`) que preconfigura host, puerto y TLS. Se descarta a favor de la
+configuración SMTP explícita (`host`, `port`, `secure`, `auth.user`, `auth.pass`, los cuatro leídos de
+`SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASSWORD`) porque el notificador no debe conocer que el
+operador usa Gmail: cualquier proveedor SMTP (Gmail, Fastmail, un servidor propio) se declara con los
+mismos cuatro secretos, sin una rama de código dedicada a uno concreto.
+
+**Webhook entra desactivado, como tercer notificador.** `docs/02-arquitectura.md` promete tres
+notificadores; con SMTP y Telegram (ADR-011) ya cubiertos, un tercero con forma deliberadamente
+distinta (POST crudo, sin credencial, con el `fetch` que ya trae el entorno) demuestra que el contrato
+`Notifier` funciona con tres formas de entrega distintas: una con credencial de aplicación (correo),
+una con credencial de bot (Telegram) y una sin ninguna (webhook). Mismo argumento que ADR-011 usa para
+justificar que Telegram se quede aunque no se use.
+
+**Consecuencias.**
+
+- `package.json` gana `nodemailer` y `@types/nodemailer` (desarrollo).
+- Ningún fichero de `src/deliver/` usa `raw` ni `jsonTransport`.
+- `tests/deliver/email.test.ts` incluye el caso de un error de SMTP simulado cuyo mensaje contiene
+  usuario y contraseña, y comprueba que ninguno de los dos llega al resultado que el orquestador anota
+  en `runs.ndjson` ni al informe.

@@ -24,6 +24,11 @@ scoring:
 caps:
   maxItems: 60
   perSourceMaxPercent: 40
+delivery: []
+health:
+  windowDays: 30
+  runFailureThreshold: 0.2
+  sourceFailureThreshold: 0.5
 `;
 
 const VALID_SECTIONS_YAML = `
@@ -72,6 +77,13 @@ test('una receta válida carga con sus campos, persona y secciones', () => {
   assert.equal(recipe.persona.text, VALID_PERSONA);
   assert.equal(recipe.sections.length, 1);
   assert.equal(recipe.sections[0]?.key, 'pulse');
+  assert.equal(recipe.name, dir.split('/').pop());
+  assert.deepEqual(recipe.delivery, []);
+  assert.deepEqual(recipe.health, {
+    windowDays: 30,
+    runFailureThreshold: 0.2,
+    sourceFailureThreshold: 0.5,
+  });
 });
 
 test('YAML sintácticamente corrupto en recipe.yaml termina en error, nunca en valores por defecto', () => {

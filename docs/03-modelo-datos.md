@@ -68,7 +68,11 @@ El dato canónico. Todo lo demás se deriva de aquí.
   recorra el informe sin conocer los nombres (regla R12). Un objeto invitaría a escribir
   `report.pulse`, y eso rompe el proyecto.
 - **`schemaVersion` existe desde el día uno.** El sistema anterior cambió de formato sin marca y
-  arrastró campos fósiles durante meses. Los 45 informes importados llevan `schemaVersion: 1`.
+  arrastró campos fósiles durante meses. En el mundo real solo existe la versión `2`: el archivo de
+  cada instancia nace vacío y no se importó nada del sistema anterior (ADR-019, que supersede al
+  ADR-013). `extractSchemaV1` sigue en `src/sources/archive.ts` a propósito y sin ningún productor:
+  `RF-C05` seguirá vigente el día que la marca salte de `2` a `3`. **Su presencia en el código no es
+  una importación pendiente.**
 - **`meta.providerWasFallback`** alimenta `RF-D07`: si el informe lo generó un proveedor de respaldo,
   se ve en el informe, no solo en el registro.
 - **`meta.linksDropped`** cuenta los enlaces que el modelo se inventó y el código descartó. Si sube,

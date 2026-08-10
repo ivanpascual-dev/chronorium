@@ -63,7 +63,9 @@ function hashTitle(title: string): string {
   return hash(normalizeTitle(title));
 }
 
-function dayStamp(date: Date): string {
+/** Compartida con `cli/run.ts` (R10): la fecha del informe (`YYYY-MM-DD`) es el mismo cálculo que
+ * el que marca `firstSeen` aquí. */
+export function dayStamp(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 

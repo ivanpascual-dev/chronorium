@@ -173,3 +173,37 @@ test('algo que no es un array de secciones produce un error', () => {
   assertFail(result);
   assert.equal(result.issues.length, 1);
 });
+
+test('un campo con label declarado sobrevive al SectionSpec devuelto (T5, render)', () => {
+  const conLabel = {
+    key: 'top',
+    title: 'Lo más relevante',
+    cardinality: 'one',
+    condition: 'always',
+    fields: [{ name: 'verdict', type: 'string', label: 'Veredicto' }],
+  };
+  const result = deriveSections([conLabel]);
+  assertOk(result);
+
+  assert.equal(result.value.sections[0]?.fields[0]?.label, 'Veredicto');
+});
+
+test('un campo sin label declarado no lo trae en el SectionSpec devuelto', () => {
+  const result = deriveSections([pulse]);
+  assertOk(result);
+
+  assert.equal(result.value.sections[0]?.fields[0]?.label, undefined);
+});
+
+test('un label que no es texto produce un error que nombra el campo', () => {
+  const malo = {
+    key: 'top',
+    title: 'Lo más relevante',
+    cardinality: 'one',
+    condition: 'always',
+    fields: [{ name: 'verdict', type: 'string', label: 42 }],
+  };
+  const result = deriveSections([malo]);
+  assertFail(result);
+  assert.match(result.issues[0]?.campo ?? '', /label/);
+});

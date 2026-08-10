@@ -75,7 +75,7 @@ function parseField(
     return undefined;
   }
 
-  const { name, type, description } = raw;
+  const { name, type, description, label } = raw;
   let ok = true;
 
   if (typeof name !== 'string' || name.length === 0) {
@@ -108,13 +108,25 @@ function parseField(
     ok = false;
   }
 
+  if (label !== undefined && typeof label !== 'string') {
+    issues.push({
+      campo: `${path}.label`,
+      motivo: `la etiqueta debe ser texto en la sección "${sectionLabel}"`,
+    });
+    ok = false;
+  }
+
   if (!ok) {
     return undefined;
   }
 
-  return description === undefined
-    ? { name: name as string, type: type as FieldType }
-    : { name: name as string, type: type as FieldType, description: description as string };
+  const field: { -readonly [K in keyof FieldSpec]: FieldSpec[K] } = {
+    name: name as string,
+    type: type as FieldType,
+  };
+  if (description !== undefined) field.description = description as string;
+  if (label !== undefined) field.label = label as string;
+  return field;
 }
 
 function parseSection(

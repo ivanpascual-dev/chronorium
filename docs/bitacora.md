@@ -61,6 +61,186 @@ hacer: el código dice cómo quedó, pero no qué se intentó antes ni qué se d
 
 ## Entradas
 
+## 2026-08-10 · Fase 4 · El correo deja de ser HTML desnudo, y la estructura del elemento vuelve a la receta
+
+**Hecho.** `src/render/email.ts` reescrito: maquetación con tablas y estilos en línea (un cliente de
+correo no es un navegador: Outlook ignora las hojas incrustadas y la abreviatura `font:`), paleta
+«papel y tinta» (azul marino estructural, naranja quemado como único acento), cabecera con
+`recipe · date`, banda de aviso para la línea de estado de R9, ficha numerada por elemento de una
+sección `list`, bloque editorial con filete para una sección `one`, y pie con el metadato técnico en
+tokens. Sigue sin recurso externo alguno y sin conocer ninguna clave de sección (R12).
+
+**Decisión al construir, sin ADR propio.** El tono de cada línea de un elemento (limpia, cálida,
+fría) sale de su **posición declarada** en `fields`, nunca de su nombre ni de su etiqueta. En una
+sección de tres campos de texto eso pinta el resumen plano, la opinión sobre naranja y lo accionable
+sobre azul, que es la forma del sistema anterior, sin que el renderizador sepa que esos tres
+conceptos existen. Con dos campos, o con siete, sigue funcionando. Es la extensión natural de las
+cuatro reglas de `item.ts` al aspecto, y el test nuevo lo fija con etiquetas `Uno`/`Dos`/`Tres`.
+
+**Se desvió.** `recipes/example/sections.yaml` cambia con ello: la sección `top` pasa de
+`title`/`verdict`/`why` a `title`/`summary` («Qué ha pasado») /`verdict` («Opinión»). No es
+maquillaje del ejemplo: el dueño echaba en falta la estructura del Chronorium anterior (qué pasó,
+opinión sincera, qué haces con ello) y **esa estructura es dominio, no mecanismo**. El renderizador
+ya sabía pintarla; lo que no existía era la declaración. Queda decidido además que el «cómo lo
+aplico» desarrollado vive en la receta **semanal** (fase 5), no en la diaria: una acción que no
+ejecutas, repetida cada mañana, enseña a saltarse la sección. La diaria conserva `applicable`
+(máximo 3, `non-empty`) para lo táctico.
+
+**Confirmado el mismo día.** El dueño corrió `pnpm probe:fase4` entero, con credenciales de modelo y
+de SMTP, y dio por bueno el correo recibido en Gmail. Con eso quedan cerradas las tres partes de T15
+y el juicio de T16, que era lo único que faltaba para cerrar la fase 4.
+
+**Lo que cazó la puerta de cierre.** `/verifier` encontró dos cosas, ninguna de diseño. Una:
+`docs/03-modelo-datos.md` seguía afirmando que "los 45 informes importados llevan `schemaVersion: 1`",
+una importación que el ADR-019 retiró en esta misma fase. El ADR había anticipado por escrito ese
+malentendido exacto y aun así el fichero que lo provocaba se quedó sin tocar, que es el punto 5 de la
+lista de la constitución ocurriendo en vivo. Corregido. Dos: el editor del dueño formatea al guardar
+con otra herramienta y otras reglas (comillas dobles, 80 columnas) que las del proyecto (comillas
+simples, 100), así que un fichero recién guardado sale del editor con el linter en rojo. Se resolvió
+con `pnpm format`, pero la causa sigue ahí y volverá en el siguiente guardado.
+
+**Deuda.** La receta semanal nace sin archivo del que destilar (ADR-019), así que su primer informe
+saldrá pobre. Y el aspecto está validado en Gmail, que es el cliente que importa aquí, pero no en
+Outlook: la maquetación con tablas y estilos en línea existe precisamente para él, y esa parte sigue
+sin comprobar contra el cliente real.
+
+---
+
+## 2026-08-10 · Fase 4 · Cierra la deuda de tests de `validate`/`doctor`
+
+**Hecho.** `tests/cli/validate.test.ts` (9 tests) y `tests/cli/doctor.test.ts` (9 tests), con el
+mismo patrón de `tests/cli/run.test.ts`: llamada directa a la función para los casos de lógica, más
+proceso hijo real (`spawnSync` sobre `src/cli/main.ts`) para los códigos de salida de verdad. Cubren:
+falta de `--recipe`, receta inexistente, receta que no valida, receta válida sin credencial (avisa
+"proveedor descartado"), el aviso de punto único de fallo (RF-D04), que el valor de un secreto real
+nunca aparece en la salida por consola (A4) aunque esté presente, `doctor` sin historial, por debajo
+y por encima del umbral de fallo, y que filtra la salud por receta cuando dos comparten
+`runs.ndjson` (R13/RF-G04). 314 tests en verde (298 + 16), typecheck y lint limpios.
+
+**Se desvió.** Ninguno de los dos comandos acepta un `providerRegistry` inyectado (a propósito:
+`validate` diagnostica proveedores de verdad para RF-D04, no tendría sentido que aceptara uno
+doblado). Eso significa que la fixture `RECIPE_YAML` de `tests/cli/helpers.ts` (que declara
+`provider: test-provider`, pensada para `runOnce()` con un registro inyectado) no sirve aquí: con el
+registro de proveedores por defecto, `test-provider` se rechaza en la validación de la receta antes
+de llegar a `diagnoseChain`. Se añadió `makeGoogleRecipeDir()` a `helpers.ts`, con
+`provider: google`, que sí está en `defaultProviderRegistry`; `diagnoseChain` no llama a la red, solo
+comprueba si la variable de entorno de la credencial está presente, así que sigue siendo un test sin
+red ni credenciales de verdad (R13).
+
+**Aprendido.** `doctor.ts` llama a `readHealth(..., new Date(), ...)` con el reloj real, no uno
+inyectado: a diferencia de `runOnce()` (que sí recibe `now` como parámetro), no hay forma de fijar
+"ahora" al probar `cliDoctor`. Las fixtures de `runs.ndjson` anclan sus timestamps a
+`Date.now() - offsetMs` en el momento del test, nunca a una fecha fija, para no depender de qué día
+se ejecute la suite.
+
+**Deuda.** La de `meta.degraded` sigue igual que en la entrada anterior: es una interpretación
+razonable, pendiente del juicio del dueño sobre un informe real degradado.
+
+---
+
+## 2026-08-09 · Fase 4 · Construido T0-T15, pendiente de confirmación del dueño
+
+**Hecho.** Los tres renderizadores (`src/render/{json,markdown,email}.ts`) desde un mismo `Report`
+canónico, con `buildReport()` (única función que lo construye, `src/render/report.ts`) y el
+escapado centralizado en `src/render/escape.ts` (idempotente a propósito: escapar dos veces no
+duplica secuencias). Los tres notificadores de fábrica (`email` con `nodemailer`, `telegram`,
+`webhook`), con `deliver()` en `src/deliver/registry.ts` recorriendo los canales declarados por
+`id`, sin detenerse ante un fallo parcial. `src/state/archive.ts` (escritura con `wx`, nunca
+sobrescribe) y `src/state/runs.ts` (`appendRun`/`readHealth`, con filtro opcional por receta).
+`src/cli/run.ts` (`runOnce()`, la única orquestación) más `validate.ts`, `doctor.ts`, `main.ts` y
+`exit-codes.ts`; `src/paths.ts` gana `resolveRecipesRoot`/`resolveDataRoot` con precedencia
+`--flag` › variable de entorno › valor por defecto. `recipe/types.ts`, `schema.ts`, `validate.ts` y
+`load.ts` ganan `delivery`, `health`, `subject` y `FieldSpec.label`. La batería de ataques crece a
+doce casos (el 4 y el 5 ahora de punta a punta, el 7 con su código de salida real, y un caso 12
+nuevo sobre fuga de credencial en la entrega). `check-receta-ejemplo.ts` llega hasta el archivo, los
+tres formatos y un notificador simulado, y demuestra RF-A04 (una sección añadida solo en memoria
+aparece en los tres formatos sin tocar `src/`). `scripts/probe-fase4.ts` escrito y verificado en su
+camino sin credenciales. ADR-019 (el archivo nace vacío, supersede al ADR-013) y ADR-020 (SMTP con
+`nodemailer`, verificado con `@dependency-audit`) añadidos antes de instalar nada. 298 tests en
+verde, sin red y sin credenciales; typecheck, lint y build limpios; `pnpm run bateria` y
+`pnpm run check:receta-ejemplo` verdes.
+
+**Se desvió.**
+
+- **T12 se adelantó, ejecutado justo después de T1** (tipos), en vez de entre T8/T9 y T13 como
+  ponía el plan. Motivo real, no un capricho: en cuanto `RecipeConfig` exige `name`/`delivery`/
+  `health` (T1), `recipe/load.ts` deja de poder construir el objeto sin ellos, y los tests de T10/T11
+  (`runOnce()`) necesitan recetas reales en disco con esos bloques para poder cargarlas. Construir
+  T12 tarde habría dejado `typecheck` roto durante media fase sin necesidad. El orden de las demás
+  tareas (T2-T9, T13-T15) se mantuvo tal cual el plan.
+- **`src/render/item.ts` y `src/deliver/secrets.ts` no están en la lista literal de ficheros del
+  plan.** El primero existe para que `markdown.ts` y `email.ts` compartan `structureItem()` y
+  `buildStatusLine()` sin que `report.ts` tuviera que importarlos (habría creado un ciclo: `report.ts`
+  → `markdown.ts` → `report.ts` si `report.ts` también componía `RenderedReport`). El segundo es
+  `redactSecrets()`, compartido por `email.ts` y `telegram.ts` para cumplir ADR-020 (A4). Mismo
+  patrón que `http.ts`/`makeItem` en la fase 2: código nuevo no listado, justificado por R10.
+- **`ChainConfigurationError` (ningún eslabón con credencial utilizable) y
+  `NoProviderSucceededError` (la cadena entera falló) se mapean los dos a `model_failed`/código 3**,
+  no a `config_error`/código 1. El plan no distinguía los dos casos explícitamente; se decidió que
+  "ningún proveedor de modelo pudo generar el informe" (la frase exacta de
+  `docs/02-arquitectura.md` para el código 3) cubre ambos, porque los dos ocurren dentro del intento
+  de síntesis, después de que la receta ya validó correctamente.
+- **RF-C01 ("seen.json se marca con lo que salió en el informe") se implementó comparando el valor
+  exacto de cada campo del informe contra `item.url`** (`collectPublishedUrls` en `src/cli/run.ts`):
+  cualquier valor de cualquier campo que coincida con la URL de un elemento recogido cuenta como
+  "publicado". Es una heurística, no una referencia explícita del modelo al elemento de origen (esa
+  referencia no existe en el contrato), pero es exacta en la práctica porque los únicos valores que
+  pueden coincidir con una URL real son los campos `url` que `validateLinks` (fase 3) ya sustituyó
+  por la URL canónica del elemento de entrada.
+- **`cli/validate.ts` y `cli/doctor.ts` no tienen ficheros de test dedicados.** El plan solo listaba
+  `tests/cli/run.test.ts` en su lista literal de ficheros. Los dos comandos se probaron a mano
+  (`node src/cli/main.ts validate --recipe example`, `... doctor --recipe example --data-root
+  <tmp>`), ambos con el comportamiento esperado, pero sin test automático que lo proteja de una
+  regresión. Queda como deuda explícita, ver más abajo.
+
+**Costó más de lo previsto.** El caso 4 extendido de la batería casi se da por roto por un test mal
+escrito, no por el código: `escapeMarkdown` neutraliza `<` con una barra invertida (`\<`), que dentro
+de la especificación CommonMark es exactamente la forma correcta de anular el carácter sin borrarlo.
+Un `assert.ok(!texto.includes('<img'))` ingenuo falla porque la subcadena `<img` sigue presente
+justo después de la barra invertida (`\<img`), aunque el carácter ya esté neutralizado para
+cualquier intérprete de Markdown real. Se corrigió comprobando la ausencia de la forma **sin**
+escapar (`(?<!\\)<img\b`) en vez de la simple subcadena. Queda anotado porque es fácil repetir el
+mismo error de test en el futuro si alguien copia el patrón de `escapeHtml` (que sí elimina el
+carácter) sin pensar en que `escapeMarkdown` neutraliza de otra forma.
+
+**Deuda.**
+
+- **T15, sin credenciales.** Solo se verificó el camino sin credenciales de `probe-fase4.ts`
+  (imprime las instrucciones y no simula nada). Las partes 2 (correo real por Gmail) y 3 (segunda
+  ejecución, no sobrescribe) quedan pendientes de que el dueño exporte una credencial de modelo real
+  y las cuatro variables SMTP y ejecute `pnpm run probe:fase4`.
+- **T16 entero.** El juicio del dueño sobre el correo recibido (¿se lee bien en el móvil?, ¿el
+  markdown se pega sin editar?, ¿se entiende la línea de estado?) no se puede sustituir por nada
+  escrito aquí: es la puerta de esta fase que decide si hace falta retocar el renderizado antes de
+  cerrar.
+- **`cli/validate.ts` y `cli/doctor.ts` sin test automático** (ver arriba). Se desbloquea escribiendo
+  `tests/cli/validate.test.ts` y `tests/cli/doctor.test.ts` con el mismo patrón de proceso hijo que
+  ya tiene `tests/cli/run.test.ts`.
+- **Los umbrales exactos de `meta.degraded`** (`sourceFailureThreshold`, `runFailureThreshold` como
+  proporción `fallidas/total`, estrictamente mayor que el umbral) son una interpretación razonable
+  del texto del plan, no un número que el plan fijara. Si el dueño, al leer un informe real
+  degradado, encuentra que el umbral se dispara demasiado pronto o demasiado tarde, es un ajuste
+  local a `computeDegraded()` en `src/render/report.ts`, sin tocar el contrato `DegradedFlag`.
+
+**Aprendido.**
+
+- Node 24 ejecuta ficheros `.ts` directamente (sin `tsx` ni flags), incluidos los que se lanzan como
+  proceso hijo desde un test (`spawnSync(process.execPath, ['src/cli/main.ts', ...])`). Eso es lo
+  que hace viable probar los cinco códigos de salida como proceso de verdad (T10) sin compilar antes
+  ni depender de `dist/`.
+- Se puede provocar el código 3 (ningún proveedor de modelo) **sin red y sin credenciales de
+  verdad**, simplemente omitiendo la variable de entorno que la receta declara: `diagnoseChain`
+  descarta el proveedor al validar, antes de intentar ninguna llamada. Combinado con una fuente
+  `type: archive` (lee disco, no red) para tener elementos, permite probar el código 3 como proceso
+  hijo genuino, cosa que no parecía posible sin un modelo doblado inyectable desde la línea de
+  comandos.
+- Un canal de entrega inyectado a mano en un test que lanza un error con una credencial en el
+  mensaje **no la redacta solo porque `deliver()` exista**: `deliver()` propaga `error.message` tal
+  cual, y la redacción (`redactSecrets`) vive dentro de cada notificador concreto (`email.ts`,
+  `telegram.ts`). El caso 12 de la batería tuvo que construirse contra el notificador de correo
+  real (`makeEmailNotifier` con un transporte doblado), no contra un notificador de prueba genérico,
+  para probar la garantía que de verdad importa.
+
 ## 2026-08-09 · Fase 3 · Corrección post-cierre: `@ai-sdk/openai` en vez del parche sobre `openai-compatible`
 
 **Hecho.** Tras comitear el cierre de la fase 3 (T0-T15, con `guardarrailes` y `/verifier` ya

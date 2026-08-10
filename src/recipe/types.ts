@@ -4,6 +4,9 @@ export interface FieldSpec {
   readonly name: string;
   readonly type: FieldType;
   readonly description?: string;
+  /** Etiqueta humana para el renderizado (T5). Sin ella, el campo se renderiza sin prefijo, nunca
+   * con el nombre técnico del campo. */
+  readonly label?: string;
 }
 
 export type SectionCondition = 'always' | 'non-empty';
@@ -89,7 +92,24 @@ export interface CapsConfig {
   readonly perSourceMaxPercent: number;
 }
 
+export interface DeliveryChannel {
+  readonly id: string;
+  readonly enabled: boolean;
+  /** Campos propios del canal, misma bolsa abierta que `SourceSpec` y por el mismo motivo. */
+  readonly [key: string]: unknown;
+}
+
+export interface HealthConfig {
+  readonly windowDays: number;
+  /** RF-G05: proporción de ejecuciones fallidas en la ventana a partir de la cual se marca. */
+  readonly runFailureThreshold: number;
+  /** RF-G02: proporción de fuentes fallidas de ESTA ejecución a partir de la cual se marca. */
+  readonly sourceFailureThreshold: number;
+}
+
 export interface RecipeConfig {
+  /** Derivado del directorio de la receta, lo necesita el archivo (T7). */
+  readonly name: string;
   readonly language: string;
   readonly topics: readonly string[];
   readonly persona: Persona;
@@ -99,6 +119,10 @@ export interface RecipeConfig {
   readonly window: WindowConfig;
   readonly scoring: ScoringConfig;
   readonly caps: CapsConfig;
+  readonly delivery: readonly DeliveryChannel[];
+  readonly health: HealthConfig;
+  /** Plantilla opcional, con `{recipe}` y `{date}`. Sin ella, `subject` sale de un formato no prosa. */
+  readonly subject?: string;
 }
 
 export interface ValidationIssue {

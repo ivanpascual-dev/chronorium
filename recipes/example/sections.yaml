@@ -1,29 +1,48 @@
 sections:
   - key: pulse
-    title: 'Pulso del día'
+    title: "Resumen del día"
     cardinality: one
     condition: always
     fields:
       - {
           name: text,
           type: string,
-          description: 'Dos o tres frases que resumen el día: qué es ruido y qué es movimiento real.',
+          description: "Resuman de las noticias del dia: qué es ruido y qué es movimiento real.",
         }
 
   - key: top
-    title: 'Lo más relevante'
+    title: "Lo más relevante"
     cardinality: list
     min: 2
     max: 5
     condition: always
     fields:
-      - { name: title, type: string }
-      - { name: verdict, type: string, description: 'Tu opinión sobre por qué importa o no importa.' }
-      - { name: why, type: string, description: 'El razonamiento detrás del veredicto.' }
+      - {
+          name: title,
+          type: string,
+          description: "El titular, reescrito con tus palabras, no copiado.",
+        }
+      - {
+          name: summary,
+          type: string,
+          label: "Qué ha pasado",
+          description:
+            "Un resumen de la noticia con los hechos: qué se ha anunciado, quién y qué cambia.
+            Sin adjetivos ni entusiasmo, eso va en la línea siguiente.",
+        }
+      - {
+          name: verdict,
+          type: string,
+          label: "Opinión",
+          description:
+            "Tu opinión sincera sobre si importa o no importa, y por qué. Decir que algo
+            es ruido, o que el anuncio no trae nada nuevo, es una respuesta válida y preferible a
+            fabricar interés.",
+        }
       - { name: link, type: url }
 
   - key: applicable
-    title: 'Aplícate esto'
+    title: "Aplícate esto"
     cardinality: list
     min: 0
     max: 3
@@ -33,6 +52,7 @@ sections:
       - {
           name: action,
           type: string,
-          description: 'Qué hacer esta semana con tus manos, no estrategia de empresa.',
+          label: "Acción",
+          description: "Qué hacer esta semana con tus manos, no estrategia de empresa.",
         }
       - { name: link, type: url }

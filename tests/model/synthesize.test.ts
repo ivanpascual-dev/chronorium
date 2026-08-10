@@ -10,6 +10,9 @@ import type { RecipeConfig } from '../../src/recipe/types.ts';
 import type { Item } from '../../src/sources/types.ts';
 
 const recipe: RecipeConfig = {
+  name: 'receta-de-prueba',
+  delivery: [],
+  health: { windowDays: 30, runFailureThreshold: 0.2, sourceFailureThreshold: 0.5 },
   language: 'español',
   topics: ['inteligencia artificial'],
   persona: { text: 'Eres el asistente de alguien que desarrolla en solitario.' },

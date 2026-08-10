@@ -46,3 +46,23 @@ scoring:
 caps:
   maxItems: 40
   perSourceMaxPercent: 50
+
+# Forma distinta de recipes/example otra vez: aquí el canal activo es telegram, no el correo, para
+# que la validación de "canal activo exige su credencial" se ejercite con un canal que no sea el
+# de fábrica por defecto.
+delivery:
+  - id: email
+    enabled: false
+    to: someone@example.com
+    from: chronorium@example.com
+  - id: telegram
+    enabled: true
+    chatId: '123456789'
+  - id: webhook
+    enabled: false
+    url: https://hooks.example.com/biotech
+
+health:
+  windowDays: 14
+  runFailureThreshold: 0.3
+  sourceFailureThreshold: 0.4
