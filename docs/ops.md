@@ -92,13 +92,14 @@ para y replantea.
 - [x] Estado agregado dentro del propio informe cuando la tasa de fallo supere el umbral
 - [x] ~~Conversión e importación de los 45 informes del sistema anterior, con marca de versión~~
       **Retirada, ver ADR-019 (supersede al ADR-013).** El archivo de cada instancia nace vacío.
+- [x] **Confirmada por el dueño el 2026-08-10**, tras `pnpm probe:fase4` completo: T15 en sus tres
+      partes (ejecución con modelo real, informe entregado por Gmail, y segunda ejecución del mismo
+      día que no sobrescribe el archivo), más el juicio sobre el correo recibido (T16 del plan)
 
-  **Construida (T0-T15 del plan), pendiente de confirmación del dueño (ver `docs/bitacora.md`).**
-  `@fiel-al-plan` y `/verifier` no se lanzan hasta esa confirmación. En particular, T15 (la prueba
-  con red real) solo corrió su parte 1 sin credenciales; las partes 2 y 3 y el juicio del dueño
-  (T16 del plan) quedan pendientes de que el dueño exporte las credenciales de modelo y de SMTP.
   `tests/cli/validate.test.ts` y `tests/cli/doctor.test.ts` (deuda anotada el 2026-08-09) se
-  escribieron el 2026-08-10, 314 tests en verde.
+  escribieron el 2026-08-10. Ese mismo día se rediseñó el correo, que el commit de la fase dejaba
+  explícitamente pendiente de retoque, y con él `recipes/example` recuperó por declaración la
+  estructura de elemento del sistema anterior. 315 tests en verde.
 
 ---
 

@@ -86,10 +86,23 @@ aplico» desarrollado vive en la receta **semanal** (fase 5), no en la diaria: u
 ejecutas, repetida cada mañana, enseña a saltarse la sección. La diaria conserva `applicable`
 (máximo 3, `non-empty`) para lo táctico.
 
-**Deuda.** El aspecto está juzgado sobre una vista previa con contenido de mentira, no sobre un
-informe real entregado por Gmail: falta verlo en el cliente de correo de verdad (parte 2 de
-`scripts/probe-fase4.ts`, que sigue pendiente de credenciales SMTP). Y la receta semanal nace sin
-archivo del que destilar (ADR-019), así que su primer informe saldrá pobre.
+**Confirmado el mismo día.** El dueño corrió `pnpm probe:fase4` entero, con credenciales de modelo y
+de SMTP, y dio por bueno el correo recibido en Gmail. Con eso quedan cerradas las tres partes de T15
+y el juicio de T16, que era lo único que faltaba para cerrar la fase 4.
+
+**Lo que cazó la puerta de cierre.** `/verifier` encontró dos cosas, ninguna de diseño. Una:
+`docs/03-modelo-datos.md` seguía afirmando que "los 45 informes importados llevan `schemaVersion: 1`",
+una importación que el ADR-019 retiró en esta misma fase. El ADR había anticipado por escrito ese
+malentendido exacto y aun así el fichero que lo provocaba se quedó sin tocar, que es el punto 5 de la
+lista de la constitución ocurriendo en vivo. Corregido. Dos: el editor del dueño formatea al guardar
+con otra herramienta y otras reglas (comillas dobles, 80 columnas) que las del proyecto (comillas
+simples, 100), así que un fichero recién guardado sale del editor con el linter en rojo. Se resolvió
+con `pnpm format`, pero la causa sigue ahí y volverá en el siguiente guardado.
+
+**Deuda.** La receta semanal nace sin archivo del que destilar (ADR-019), así que su primer informe
+saldrá pobre. Y el aspecto está validado en Gmail, que es el cliente que importa aquí, pero no en
+Outlook: la maquetación con tablas y estilos en línea existe precisamente para él, y esa parte sigue
+sin comprobar contra el cliente real.
 
 ---
 

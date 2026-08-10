@@ -65,7 +65,10 @@ function textStyle(options: {
  * texto esto pinta «resumen» plano, la opinión sobre naranja y lo accionable sobre azul, sin que el
  * renderizador sepa que existen esos tres conceptos. Con dos campos, o con siete, sigue funcionando.
  */
-function accentFor(index: number): { readonly accent: string; readonly tint?: string } {
+function accentFor(index: number): {
+  readonly accent: string;
+  readonly tint?: string;
+} {
   if (index === 0) {
     return { accent: COLOR.muted };
   }
