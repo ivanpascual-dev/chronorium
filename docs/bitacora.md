@@ -61,6 +61,78 @@ hacer: el código dice cómo quedó, pero no qué se intentó antes ni qué se d
 
 ## Entradas
 
+## 2026-08-11 · Fase 5 · La instancia en marcha, y tres capas que contaban sin nombrar
+
+**Hecho.** T5, T6 y casi todo T7. La instancia privada existe, con las dos recetas reales (30
+fuentes verificadas contra la red, no contra la memoria), los siete secretos en su almacén y el
+workflow llamando al reutilizable pinado a etiqueta. **El primer informe de verdad llegó por correo**
+el 2026-08-11: 3.142 elementos recogidos, 74 analizados, 3 enlaces inventados descartados por
+código. Relanzar el mismo día sale con 0 en 59 ms sin tocar el informe archivado, comprobado. Del
+repositorio público salieron tres etiquetas ese día, `v0.5.1` a `v0.5.3`.
+
+**Se desvió.** T7 estaba escrito como "lanzar y comprobar", una tarea de verificación. Fue una
+sesión de corrección: cuatro fallos reales, ninguno previsto por el plan.
+
+1. **La instancia no podía identificarse ante la API de GitHub.** El reutilizable no exportaba
+   ningún `GITHUB_TOKEN`, y GitHub prohíbe llamar a un secreto con ese prefijo, así que la instancia
+   no tenía forma de dárselo. Con el cupo sin identificar (60/hora **por IP**, compartida con miles
+   de trabajos ajenos) un 403 tumbaba la fuente entera, porque `repo-releases` lee sus repositorios
+   con `Promise.all`. Resuelto mapeando un secreto de nombre libre a la variable, con un `unset`
+   para el caso de que llegue vacío: los dos lectores comprueban que exista, no que traiga algo, y
+   la cadena vacía habría mandado una cabecera `Authorization` con un `Bearer` y nada detrás,
+   cosechando un 401.
+2. **`startup_failure` por permisos.** El reutilizable declara `contents: write` y un llamador nunca
+   puede conceder más permiso del que él mismo tiene. Se resolvió por job, no cambiando el ajuste
+   global del repositorio: así lo tiene solo lo que lo necesita.
+3. **Código 4, sin causa.** Ver abajo.
+4. **Una fuente caída sin nombre.** Ver abajo.
+
+**Costó más de lo previsto.** Averiguar por qué falló el correo, y por una razón que da rabia: **el
+proceso tenía la causa en la mano y la tiraba.** `deliver/registry.ts` capturaba el error del canal
+y `cli/run.ts` se quedaba con `{id, ok}`. El log decía `delivery_failed (código 4)` y nada más.
+Hicieron falta dos pruebas escritas a mano (una local y otra dentro del runner, hablando SMTP a
+pelo) para descubrir que `SMTP_PORT` estaba guardado con un valor que no era 465. El mismo defecto
+apareció al día siguiente en otras dos capas: `sources 29/30` sin decir cuál, y `provider openai
+(fallback)` sin decir por qué se descartó el principal. Las tres eran la misma frase escrita tres
+veces: **contar sin nombrar.** Corregido en `v0.5.2` y `v0.5.3`, con `sourcesFailedDetail`, con
+`providersTried` anotándose **también cuando la cadena acaba bien**, y con los avisos impresos
+también con código 0, que es cuando nadie mira. `providersTried` pasó además de lista de nombres a
+los intentos con su porqué: `RF-D06` pedía "y por qué se descartó cada uno" desde el principio y el
+código guardaba la mitad.
+
+**Sorpresas de terceros.**
+
+- `hnrss.org/newest?q=LLM&points=20` devuelve **502 en 5 de 5 intentos**, reproducible. Cada
+  parámetro por separado funciona; combinar búsqueda y umbral de votos rompe su servidor. Las dos
+  fuentes de Hacker News pasaron a la API de Algolia, que es la que usa el propio buscador de HN.
+- **El enmascarado de secretos de Actions vuelve ilegible un secreto numérico.** El puerto salía
+  como `***` en el log, incluido dentro de la expresión que lo comparaba. La pista que lo delató no
+  fue el valor sino una consecuencia suya: una línea que imprimía `cifrado desde el principio:
+  false`, que solo es falso cuando el puerto no es 465. Cuando el valor está tapado, hay que
+  imprimir algo **derivado** de él.
+
+**Deuda.**
+
+- **Por qué el proveedor principal cae al respaldo, dos ejecuciones de dos.** Google se valida vivo
+  y falla al llamar. La sospecha (no verificada) es el desbordamiento de `max` de una sección ya
+  documentado en la entrada del 2026-08-09. Se desbloquea solo: `v0.5.3` ya anota la causa, así que
+  la próxima ejecución la dirá con nombre.
+- **Solapar dos ejecuciones** para ver que se serializan en vez de cancelarse, único punto de T7 sin
+  comprobar.
+- **T8 y T9**: el rodaje en sombra y el apagado del sistema anterior, con la rotación de sus tres
+  credenciales.
+- **`recipes/example` del repositorio público tiene los `topics` escritos como frases**, que nunca
+  casan como subcadena literal, así que su componente de temas puntúa cero y el orden lo decide solo
+  la recencia. No se toca aquí: es material de fase 6, donde el ejemplo es el producto.
+
+**Aprendido.** Un secreto mal copiado **no falla al guardarse, falla cada mañana**, que es el
+defecto número 3 de la lista de la constitución, ahora medido en este proyecto y no solo en el
+anterior. Y una lección nueva, más general que su caso: **un agregado que cuenta sin nombrar no
+sirve para detectar una condición crónica**, que es justo lo que R9 existe para evitar. "29 de 30"
+repetido catorce días es indistinguible de catorce fuentes distintas cayéndose una vez cada una, y
+las dos situaciones piden acciones opuestas. La cuenta responde "¿cuánto?"; para "¿otra vez la
+misma?" hace falta el identificador.
+
 ## 2026-08-10 · Fase 5 · El reutilizable, la memoria por receta (ADR-021), y dónde para esta sesión
 
 **Hecho.** T0-T4 del plan: los cinco hallazgos de la plataforma verificados contra la documentación

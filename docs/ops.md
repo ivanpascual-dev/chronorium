@@ -106,11 +106,17 @@ para y replantea.
 ## FASE 5 · Ejecución programada y la instancia
 
 - [x] Workflow reutilizable en el repositorio público, con grupo de concurrencia
-- [ ] Crear el repositorio privado de la instancia
-- [ ] Recetas reales: la diaria y el resumen semanal del lunes
-- [ ] Secretos en el repositorio de la instancia
+- [x] Crear el repositorio privado de la instancia
+- [x] Recetas reales: la diaria y el resumen semanal del lunes
+- [x] Secretos en el repositorio de la instancia
+- [x] **Primera ejecución de verdad:** el informe llega por correo, se archiva y el commit vuelve
+      solo. Relanzar el mismo día sale con 0 sin sobrescribir. Hecho el 2026-08-11, ver bitácora
+- [ ] Comprobar que dos ejecuciones simultáneas **se serializan y ninguna muere cancelada**
 - [ ] **Rodaje en sombra:** las dos versiones en paralelo varios días, comparando informes
 - [ ] Apagar el sistema anterior **solo** cuando el nuevo gane esa comparación
+
+> El cron semanal está declarado y activo desde el 2026-08-17, primer lunes con una semana entera de
+> diarias que destilar. Antes de esa fecha destilaría un archivo vacío y saldría con código 2.
 
 ---
 
