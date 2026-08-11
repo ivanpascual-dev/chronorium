@@ -14,6 +14,8 @@ import {
   makeDataRoot,
   makeRecipeDir,
   mockModel,
+  RECIPE_YAML,
+  RSS_FEED,
   trackedTmpDir,
 } from './helpers.ts';
 
@@ -202,6 +204,45 @@ test('el canal que falla deja su causa en runs.ndjson, no solo un booleano', asy
   const failed = record.delivery.find((channel: { ok: boolean }) => !channel.ok);
   assert.equal(failed.error, 'el servidor no respondió a tiempo');
   assert.equal(typeof failed.durationMs, 'number');
+});
+
+test('una fuente caída con la ejecución en 0: se nombra, no solo se cuenta', async () => {
+  const recipeConDosFuentes = RECIPE_YAML.replace(
+    '    url: https://example.com/feed.xml',
+    '    url: https://example.com/feed.xml\n  - id: la-que-se-cae\n    type: feed\n    url: https://rota.example.com/feed.xml',
+  );
+  const recipeDir = makeRecipeDir({ recipeYaml: recipeConDosFuentes });
+  const dataRoot = makeDataRoot();
+
+  const result = await runOnce({
+    recipeDir,
+    dataRoot,
+    dryRun: false,
+    now: NOW,
+    secret: secretWithModelKey,
+    sourceFetch: async (url: string) => {
+      if (url.includes('rota.example.com')) throw new Error('getaddrinfo ENOTFOUND');
+      return { ok: true, status: 200, text: async () => RSS_FEED };
+    },
+    deliverFetch: neverDeliverFetch(),
+    userAgent: 'test/1.0',
+    providerRegistry: fakeProviderRegistry(mockModel(JSON.stringify({ pulse: { text: 'x' } }))),
+    notifierRegistry: noopNotifierRegistry(),
+  });
+
+  // El informe sale, y por eso mismo la fuente caída se pasaría por alto si no se dijera en voz alta.
+  assert.equal(result.exitCode, 0);
+  assert.ok(result.degradations?.some((aviso) => aviso.includes('la-que-se-cae')));
+
+  const record = JSON.parse(
+    readFileSync(join(dataRoot, 'state', 'runs.ndjson'), 'utf8')
+      .trim()
+      .split('\n')
+      .at(-1) ?? '',
+  );
+  assert.deepEqual(record.sources, { ok: 1, failed: 1 });
+  assert.equal(record.sourcesFailedDetail[0].id, 'la-que-se-cae');
+  assert.match(record.sourcesFailedDetail[0].error, /ENOTFOUND/);
 });
 
 test('--dry-run no escribe nada: ni archivo, ni seen.json, ni runs.ndjson, ni entrega', async () => {

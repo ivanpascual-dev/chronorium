@@ -129,7 +129,8 @@ Una línea por ejecución, se añade y no se reescribe. A una línea al día, es
 
 ```jsonc
 {"ts":"2026-08-05T08:00:31Z","recipe":"daily","result":"ok","exitCode":0,"provider":"gemini","fallback":false,"itemsCollected":67,"sources":{"ok":17,"failed":2},"durationMs":41200}
-{"ts":"2026-08-06T08:00:12Z","recipe":"daily","result":"model_failed","exitCode":3,"providersTried":["gemini","openai"],"lastError":"503"}
+{"ts":"2026-08-06T08:00:12Z","recipe":"daily","result":"model_failed","exitCode":3,"providersTried":[{"provider":"google","id":"gemini","outcome":"failed","reason":"503","attempts":3}],"lastError":"503"}
+{"ts":"2026-08-06T08:00:31Z","recipe":"daily","result":"ok","exitCode":0,"provider":"openai","fallback":true,"sources":{"ok":29,"failed":1},"sourcesFailedDetail":[{"id":"mistral","error":"404"}],"providersTried":[{"provider":"google","id":"gemini","outcome":"failed","reason":"503","attempts":3}]}
 {"ts":"2026-08-07T08:00:44Z","recipe":"daily","result":"delivery_failed","exitCode":4,"provider":"gemini","delivery":[{"id":"email","ok":false,"error":"Connection timeout","durationMs":120004}]}
 ```
 
@@ -137,7 +138,13 @@ Una línea por ejecución, se añade y no se reescribe. A una línea al día, es
 últimos treinta hubo informe?" se responde con un comando (`RF-G04`). Sin él, hay que comparar
 nombres de fichero, que es como se descubrió que faltaban once días.
 
-`providersTried` cumple `RF-D06`: deja por escrito qué se intentó y por qué se descartó cada uno.
+`providersTried` cumple `RF-D06`: deja por escrito qué se intentó y por qué se descartó cada uno. El
+que produjo el informe no aparece ahí, ya está en `provider`. **Y aparece también cuando la ejecución
+fue bien**, que es el caso que importa: "hoy el principal falló" y "el principal lleva ocho días
+fallando" son la misma línea si solo se guarda quién ganó, y la segunda significa que la red de
+seguridad se está gastando sin que nadie lo haya decidido. `sourcesFailedDetail` hace lo mismo con
+las fuentes: `sources` cuenta, esto nombra, y sin el nombre no se puede ver que siempre se cae la
+misma.
 
 `delivery` sigue la misma regla para la entrega: el canal que falló arrastra su causa y su duración,
 el que fue bien no arrastra nada. Un `{"ok":false}` a secas convierte el código 4 en un código sin

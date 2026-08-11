@@ -113,7 +113,7 @@ health: ${opts.health ?? '{ windowDays: 30, runFailureThreshold: 0.5, sourceFail
   return { recipeDir, recipesRoot };
 }
 
-const RSS_FEED = `<?xml version="1.0" encoding="UTF-8"?>
+export const RSS_FEED = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
     <title>Feed de prueba</title>

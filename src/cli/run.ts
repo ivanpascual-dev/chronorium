@@ -71,6 +71,9 @@ export interface RunOnceResult {
   readonly report?: Report;
   readonly rendered?: RenderedReport;
   readonly deliverOutcome?: DeliverOutcome;
+  /** Lo que se degradó sin impedir el informe. Sale también con código 0, a propósito: el día que
+   * una fuente se cae o el proveedor principal falla, la ejecución "va bien" y nadie mira. */
+  readonly degradations?: readonly string[];
 }
 
 /** El primer campo declarado de cada elemento del informe que coincide con la URL exacta de un
@@ -168,10 +171,18 @@ export async function runOnce(options: RunOnceOptions): Promise<RunOnceResult> {
   const sourcesOk = sourceResults.filter((result) => result.ok).length;
   const sourcesFailed = sourceResults.length - sourcesOk;
 
+  // "29 de 30" no dice cuál se cayó, y una fuente que falla dos semanas seguidas es indistinguible
+  // de una que falló ayer si solo se guarda la cuenta. `sourceFailureThreshold` de la receta existe
+  // precisamente para vigilar fuentes concretas: sin el identificador aquí, no hay con qué vigilarlas.
+  const sourcesFailedDetail = sourceResults
+    .filter((result) => !result.ok)
+    .map((result) => ({ id: result.id, error: result.error ?? 'sin causa registrada' }));
+
   if (collected.length === 0) {
     return finish('no_items', {
       itemsCollected: 0,
       sources: { ok: sourcesOk, failed: sourcesFailed },
+      ...(sourcesFailedDetail.length > 0 ? { sourcesFailedDetail } : {}),
     });
   }
 
@@ -195,13 +206,14 @@ export async function runOnce(options: RunOnceOptions): Promise<RunOnceResult> {
     // entera se intentó y falló" (NoProviderSucceededError) son "ningún proveedor de modelo pudo
     // generar el informe" (docs/02-arquitectura.md, código 3): la distinción entre las dos es de
     // diagnóstico interno (`providersTried`), no de código de salida.
+    // Con el porqué de cada uno, no solo su nombre: RF-D06 pide "qué se intentó **y por qué se
+    // descartó cada uno**", y una lista de nombres deja fuera justo la mitad que sirve para algo.
     const providersTried =
-      cause instanceof NoProviderSucceededError
-        ? cause.providersTried.map((attempt) => attempt.provider)
-        : undefined;
+      cause instanceof NoProviderSucceededError ? cause.providersTried : undefined;
     return finish('model_failed', {
       itemsCollected: collected.length,
       sources: { ok: sourcesOk, failed: sourcesFailed },
+      ...(sourcesFailedDetail.length > 0 ? { sourcesFailedDetail } : {}),
       providersTried,
       lastError: errorMessage(cause),
     });
@@ -263,6 +275,13 @@ export async function runOnce(options: RunOnceOptions): Promise<RunOnceResult> {
         ),
   );
 
+  // La cadena de proveedores hizo su trabajo, y ese es justo el momento en que nadie mira: el
+  // informe llegó. Pero "hoy el principal falló" y "el principal lleva ocho días fallando" son la
+  // misma línea si solo se guarda quién ganó, y la segunda significa que la red de seguridad se
+  // gastó sin que nadie lo decidiera. Se anota lo que se descartó, nunca el que ganó (ya está en
+  // `provider`), y solo cuando hubo algo que descartar.
+  const providersDiscarded = synthesis.providersTried.filter((attempt) => attempt.outcome !== 'ok');
+
   return finish(
     deliverOutcome.ok ? 'ok' : 'delivery_failed',
     {
@@ -270,9 +289,22 @@ export async function runOnce(options: RunOnceOptions): Promise<RunOnceResult> {
       fallback: synthesis.providerWasFallback,
       itemsCollected: collected.length,
       sources: { ok: sourcesOk, failed: sourcesFailed },
+      ...(sourcesFailedDetail.length > 0 ? { sourcesFailedDetail } : {}),
+      ...(providersDiscarded.length > 0 ? { providersTried: providersDiscarded } : {}),
       delivery: deliverySummary,
     },
-    { report, rendered, deliverOutcome },
+    {
+      report,
+      rendered,
+      deliverOutcome,
+      degradations: [
+        ...sourcesFailedDetail.map((source) => `fuente "${source.id}" caída: ${source.error}`),
+        ...providersDiscarded.map(
+          (attempt) =>
+            `proveedor ${attempt.provider}/${attempt.id} descartado tras ${attempt.attempts} intento(s): ${attempt.reason ?? 'sin causa registrada'}`,
+        ),
+      ],
+    },
   );
 }
 
@@ -385,6 +417,13 @@ export async function cliRun(
     }
   } else {
     console.log(`chronorium run: ${result.result} (código ${result.exitCode})`);
+  }
+
+  // Fuera del `if`: lo que se degradó se dice **también cuando la ejecución fue bien**, que es
+  // cuando se pasa por alto. Una fuente caída y un proveedor principal que falló no cambian el
+  // código de salida, y por eso son justo los que se vuelven crónicos sin que nadie lo note.
+  for (const degradation of result.degradations ?? []) {
+    console.warn(`  aviso: ${degradation}`);
   }
 
   return result.exitCode;
