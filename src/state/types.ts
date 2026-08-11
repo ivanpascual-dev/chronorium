@@ -17,6 +17,15 @@ export interface RunRecord {
   readonly itemsCollected?: number;
   readonly sources?: { readonly ok: number; readonly failed: number };
   readonly providersTried?: readonly string[];
-  readonly delivery?: readonly { readonly id: string; readonly ok: boolean }[];
+  /** `error` y `durationMs` solo aparecen en el canal que falló, y son el equivalente de
+   * `lastError`/`providersTried` para la entrega: sin ellos, "delivery_failed" es un código sin
+   * causa y hay que reproducir el fallo a mano para saber qué pasó. El mensaje ya viene con los
+   * secretos tachados desde el propio notificador (`deliver/secrets.ts`). */
+  readonly delivery?: readonly {
+    readonly id: string;
+    readonly ok: boolean;
+    readonly error?: string;
+    readonly durationMs?: number;
+  }[];
   readonly lastError?: string;
 }

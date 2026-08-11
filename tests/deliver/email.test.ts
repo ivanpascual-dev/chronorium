@@ -4,6 +4,7 @@ import {
   type MailMessage,
   type MailTransport,
   makeEmailNotifier,
+  type SmtpConfig,
 } from '../../src/deliver/email.ts';
 import type { NotifierConfig } from '../../src/deliver/types.ts';
 import { makeCtx, makeRendered, neverFetch } from './helpers.ts';
@@ -87,6 +88,39 @@ test('sin las cuatro credenciales SMTP, falla de forma explícita', async () => 
 
   await assert.rejects(() =>
     notifier.send(rendered, channelCfg, makeCtx(neverFetch(), { secret: () => undefined })),
+  );
+});
+
+test('declara los tiempos de espera de conexión: un puerto cerrado falla rápido, no en dos minutos', async () => {
+  let visto: SmtpConfig | undefined;
+  const notifier = makeEmailNotifier((config) => {
+    visto = config;
+    return { async sendMail() {} };
+  });
+
+  await notifier.send(
+    makeRendered(),
+    channelCfg,
+    makeCtx(neverFetch(), { secret: smtpSecrets, timeoutMs: 7_000 }),
+  );
+
+  assert.equal(visto?.connectionTimeout, 7_000);
+  assert.equal(visto?.greetingTimeout, 7_000);
+});
+
+test('un SMTP_PORT que no es un puerto se rechaza por nombre, en vez de conectar al 0', async () => {
+  const notifier = makeEmailNotifier(fakeTransportFactory([]));
+  const secretosConPuertoRoto = (name: string): string | undefined =>
+    name === 'SMTP_PORT' ? '465 ' + '\n(el que copié)' : smtpSecrets(name);
+
+  await assert.rejects(
+    () =>
+      notifier.send(
+        makeRendered(),
+        channelCfg,
+        makeCtx(neverFetch(), { secret: secretosConPuertoRoto }),
+      ),
+    /SMTP_PORT/,
   );
 });
 

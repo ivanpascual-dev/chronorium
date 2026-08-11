@@ -250,10 +250,18 @@ export async function runOnce(options: RunOnceOptions): Promise<RunOnceResult> {
     ...(options.notifierRegistry !== undefined ? { registry: options.notifierRegistry } : {}),
   });
 
-  const deliverySummary = deliverOutcome.results.map((result) => ({
-    id: result.id,
-    ok: result.ok,
-  }));
+  // El canal que falló se lleva su causa y su duración al registro. Quedarse solo con `{id, ok}`
+  // deja "delivery_failed" sin explicación en el único sitio que sobrevive a la ejecución, y obliga
+  // a reproducir el fallo a mano para leer un mensaje que ya se tenía. Un canal que fue bien no
+  // arrastra nada: la línea del registro no es un log.
+  const deliverySummary = deliverOutcome.results.map((result) =>
+    result.ok
+      ? { id: result.id, ok: true }
+      : withDefined<{ id: string; ok: boolean; error?: string; durationMs?: number }>(
+          { id: result.id, ok: false },
+          { error: result.error, durationMs: result.durationMs },
+        ),
+  );
 
   return finish(
     deliverOutcome.ok ? 'ok' : 'delivery_failed',
@@ -364,6 +372,17 @@ export async function cliRun(
     );
   } else if (result.exitCode !== 0) {
     console.error(`chronorium run: ${result.result} (código ${result.exitCode})`);
+    // Un fallo de entrega sin la causa delante obliga a un viaje de vuelta: reproducir el envío a
+    // mano solo para leer un mensaje que el proceso ya tenía en la mano. El mensaje llega con los
+    // secretos tachados desde el notificador, y la duración importa tanto como el texto (un canal
+    // que tarda justo el tiempo de espera del transporte no está siendo rechazado, no llega).
+    for (const channel of result.deliverOutcome?.results ?? []) {
+      if (!channel.ok) {
+        console.error(
+          `  canal "${channel.id}" falló tras ${channel.durationMs} ms: ${channel.error ?? 'sin causa registrada'}`,
+        );
+      }
+    }
   } else {
     console.log(`chronorium run: ${result.result} (código ${result.exitCode})`);
   }

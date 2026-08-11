@@ -174,6 +174,36 @@ test('informe generado y todos los canales de entrega fallando ⇒ código 4', a
   );
 });
 
+test('el canal que falla deja su causa en runs.ndjson, no solo un booleano', async () => {
+  const recipeDir = makeRecipeDir({});
+  const dataRoot = makeDataRoot();
+
+  await runOnce({
+    recipeDir,
+    dataRoot,
+    dryRun: false,
+    now: NOW,
+    secret: secretWithModelKey,
+    sourceFetch: fakeSourceFetch(),
+    deliverFetch: neverDeliverFetch(),
+    userAgent: 'test/1.0',
+    providerRegistry: fakeProviderRegistry(mockModel(JSON.stringify({ pulse: { text: 'x' } }))),
+    notifierRegistry: fakeNotifierRegistry(async () => {
+      throw new Error('el servidor no respondió a tiempo');
+    }),
+  });
+
+  const record = JSON.parse(
+    readFileSync(join(dataRoot, 'state', 'runs.ndjson'), 'utf8')
+      .trim()
+      .split('\n')
+      .at(-1) ?? '',
+  );
+  const failed = record.delivery.find((channel: { ok: boolean }) => !channel.ok);
+  assert.equal(failed.error, 'el servidor no respondió a tiempo');
+  assert.equal(typeof failed.durationMs, 'number');
+});
+
 test('--dry-run no escribe nada: ni archivo, ni seen.json, ni runs.ndjson, ni entrega', async () => {
   const recipeDir = makeRecipeDir({});
   const dataRoot = makeDataRoot();

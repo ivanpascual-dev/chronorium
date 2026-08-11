@@ -130,6 +130,7 @@ Una línea por ejecución, se añade y no se reescribe. A una línea al día, es
 ```jsonc
 {"ts":"2026-08-05T08:00:31Z","recipe":"daily","result":"ok","exitCode":0,"provider":"gemini","fallback":false,"itemsCollected":67,"sources":{"ok":17,"failed":2},"durationMs":41200}
 {"ts":"2026-08-06T08:00:12Z","recipe":"daily","result":"model_failed","exitCode":3,"providersTried":["gemini","openai"],"lastError":"503"}
+{"ts":"2026-08-07T08:00:44Z","recipe":"daily","result":"delivery_failed","exitCode":4,"provider":"gemini","delivery":[{"id":"email","ok":false,"error":"Connection timeout","durationMs":120004}]}
 ```
 
 **Este fichero es la respuesta directa al defecto que más costó.** Con él, "¿cuántos días de los
@@ -137,6 +138,11 @@ Una línea por ejecución, se añade y no se reescribe. A una línea al día, es
 nombres de fichero, que es como se descubrió que faltaban once días.
 
 `providersTried` cumple `RF-D06`: deja por escrito qué se intentó y por qué se descartó cada uno.
+
+`delivery` sigue la misma regla para la entrega: el canal que falló arrastra su causa y su duración,
+el que fue bien no arrastra nada. Un `{"ok":false}` a secas convierte el código 4 en un código sin
+explicación, y obliga a reproducir el envío a mano para leer un mensaje que el proceso ya tenía. El
+mensaje llega con los secretos tachados desde el propio notificador.
 
 ---
 

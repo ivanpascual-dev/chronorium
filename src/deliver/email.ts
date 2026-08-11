@@ -22,6 +22,13 @@ export interface SmtpConfig {
   readonly port: number;
   readonly secure: boolean;
   readonly auth: { readonly user: string; readonly pass: string };
+  /** Los dos tiempos de espera de la fase de conexión. Sin declararlos, el transporte espera **dos
+   * minutos** antes de rendirse, así que un puerto equivocado o una salida cortada no se distingue
+   * de "el modelo tardó": la ejecución simplemente se para. Con el tiempo de espera del resto del
+   * sistema, ese caso falla rápido y con nombre. El envío en sí conserva el suyo por defecto: el
+   * cuerpo de un informe no viaja en diez segundos garantizados. */
+  readonly connectionTimeout: number;
+  readonly greetingTimeout: number;
 }
 
 export type TransportFactory = (config: SmtpConfig) => MailTransport;
@@ -82,8 +89,18 @@ export function makeEmailNotifier(
       }
 
       const port = Number(portRaw);
+      if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+        throw new Error(`SMTP_PORT no es un número de puerto: "${portRaw}"`);
+      }
       const secure = port === 465;
-      const transport = transportFactory({ host, port, secure, auth: { user, pass } });
+      const transport = transportFactory({
+        host,
+        port,
+        secure,
+        auth: { user, pass },
+        connectionTimeout: ctx.timeoutMs,
+        greetingTimeout: ctx.timeoutMs,
+      });
 
       try {
         await transport.sendMail({
