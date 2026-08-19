@@ -8,6 +8,10 @@ model:
   # reasoningEffort: medium   # opcional en cualquier eslabón que lo soporte (openai o google);
   # aquí se traduciría a thinkingConfig.thinkingLevel de Gemini, no a nada de OpenAI (ADR-018)
   #
+  # maxOutputTokens: 4096   # opcional, tope de tokens de salida de la llamada. Depende del tamaño
+  # de ESTA receta (elementos de entrada, secciones a rellenar): una que destila varias recetas ya
+  # archivadas (ver "archive" en `sources`) suele necesitar más margen que una diaria corriente.
+  #
   # Una receta de fábrica funciona con esta única credencial (RF-B04, RF-H04). Un segundo
   # proveedor quita el punto único de fallo (ADR-009) y se declara así, sin tocar el código:
   # fallbacks:

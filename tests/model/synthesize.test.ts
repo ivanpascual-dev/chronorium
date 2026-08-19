@@ -214,6 +214,58 @@ test('una salida que no valida contra el esquema no se rellena y cuenta como fal
   assert.equal(primaryAttempt?.attempts, 1);
 });
 
+test('"model.maxOutputTokens" de la receta llega tal cual a la llamada al modelo', async () => {
+  const seen: (number | undefined)[] = [];
+  const capturing = new MockLanguageModelV4({
+    doGenerate: async (params) => {
+      seen.push(params.maxOutputTokens);
+      return {
+        content: [{ type: 'text', text: JSON.stringify(validOutput) }],
+        finishReason: { unified: 'stop', raw: undefined },
+        usage: {
+          inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined },
+          outputTokens: { total: 20, text: 20, reasoning: undefined },
+        },
+        warnings: [],
+      };
+    },
+  });
+  const registry = registryWith({ primary: capturing });
+
+  await synthesize({
+    recipe: { ...recipe, model: { ...recipe.model, maxOutputTokens: 8192 } },
+    items,
+    secret,
+    registry,
+    retry: fastRetry,
+  });
+
+  assert.deepEqual(seen, [8192]);
+});
+
+test('sin "model.maxOutputTokens" en la receta, la llamada no fuerza ningún valor propio', async () => {
+  const seen: (number | undefined)[] = [];
+  const capturing = new MockLanguageModelV4({
+    doGenerate: async (params) => {
+      seen.push(params.maxOutputTokens);
+      return {
+        content: [{ type: 'text', text: JSON.stringify(validOutput) }],
+        finishReason: { unified: 'stop', raw: undefined },
+        usage: {
+          inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined },
+          outputTokens: { total: 20, text: 20, reasoning: undefined },
+        },
+        warnings: [],
+      };
+    },
+  });
+  const registry = registryWith({ primary: capturing });
+
+  await synthesize({ recipe, items, secret, registry, retry: fastRetry });
+
+  assert.deepEqual(seen, [4096]);
+});
+
 test('el informe devuelto ya tiene los enlaces saneados', async () => {
   const registry = registryWith({
     primary: sequenceModel([
