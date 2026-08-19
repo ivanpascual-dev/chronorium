@@ -61,6 +61,34 @@ hacer: el código dice cómo quedó, pero no qué se intentó antes ni qué se d
 
 ## Entradas
 
+## 2026-08-19 · Fase 5 · Cierre: `@fiel-al-plan` encontró cuatro desvíos, los cuatro resueltos en la misma sesión
+
+**Hecho.** `@fiel-al-plan` dio veredicto "desviado, hay que parar" sobre cuatro puntos, ninguno en
+el código de T0-T4 (ese tramo salió "fiel" letra por letra). Los cuatro se resolvieron antes de
+lanzar `/verifier`, que cerró la fase con veredicto **cerrada con deuda**:
+
+1. **Cuatro commits sin etiquetar** desde `v0.5.3`, incluido el arreglo del incidente de tokens de
+   salida (ver la entrada de abajo). Se cortó y publicó `v0.5.4`.
+2. **`src/model/client.ts` y `src/model/synthesize.ts` tocados fuera de las excepciones que el plan
+   nombraba** (H1/H2/H3), sin ADR. El dueño confirmó que fue una decisión suya, no un desvío
+   accidental: sacar `maxOutputTokens` de una constante fija a un campo opcional de la receta,
+   porque el tamaño de cada receta decide cuánto presupuesto de salida necesita. Se escribió
+   **ADR-022** para dejarlo registrado como decisión, no como nota suelta.
+3. **`docs/ops.md` marcaba "apagar el sistema anterior" como hecho** mientras "rotar sus tres
+   credenciales" seguía sin marcar, y el plan exige la rotación antes del apagado. El dueño confirmó
+   que ambas tareas estaban hechas (las credenciales nunca estuvieron en ningún sitio público, solo
+   en local); se marcaron las dos casillas pendientes de "Tareas previas que no dependen de este
+   plan".
+4. **El apagado se decidió el mismo día que un incidente de la semanal sin confirmar al 100%**
+   (la hipótesis de `finishReason: "length"` solo se había probado en local, no en el cron real). El
+   dueño decidió no esperar a la confirmación programada del 2026-08-24 para cerrar la fase; el
+   riesgo asumido queda escrito en la entrada del incidente, de abajo.
+
+**Aprendido.** `fiel-al-plan` puede señalar un desvío de proceso (tocar código fuera de lo que el
+plan permitía) sin que la decisión de fondo esté mal: aquí el desvío era real (faltaba el ADR), pero
+la decisión que lo causó era correcta y coherente con la regla central del proyecto. La corrección
+no fue deshacer el cambio, fue escribir el ADR que debió ir antes.
+
 ## 2026-08-19 · Fase 5 · La semanal se quedó sin tokens de salida, y el SDK no decía por qué
 
 **Hecho.** La receta "weekly" falló el 2026-08-17 con `model_failed` (código 3): los dos
@@ -79,11 +107,24 @@ error genérico, y guarda el motivo real (`finishReason` y tokens de salida usad
 tokens consumidos, indistinguible de un rechazo del proveedor o de cualquier otro fallo de
 cliente.
 
-**Deuda.** La hipótesis (tokens de salida agotados, `finishReason: "length"`) no quedó confirmada
-al 100% sobre el incidente real del 17: el log de esa ejecución ya no tiene el dato, porque el
-mensaje genérico no lo guardaba. Queda para la próxima ejecución programada de la semanal
-(el lunes) comprobar si el nuevo registro confirma la causa y si el valor declarado en
-`model.maxOutputTokens` basta.
+**Deuda, cerrada por decisión del dueño sin esperar al 2026-08-24.** La hipótesis (tokens de salida
+agotados, `finishReason: "length"`) no quedó confirmada al 100% sobre el incidente real del 17: el
+log de esa ejecución ya no tiene el dato, porque el mensaje genérico no lo guardaba. El dueño
+ejecutó la receta semanal en local con los dos cambios aplicados y el informe salió bien. La
+confirmación estricta (el cron real, programado, sobre el archivo real de la instancia) habría
+llegado el 2026-08-24, pero el dueño decide no esperarla para cerrar la fase.
+
+**Riesgo residual asumido, dicho en voz alta:** si la hipótesis fuera incorrecta y la semanal del
+24 volviera a fallar por presupuesto de salida, ya no sería el fallo mudo del incidente original
+(R9): el segundo cambio de ADR-022 (`client.ts` reporta `finishReason` y tokens usados) hace que
+ese fallo, si ocurre, quede diagnosticado en `runs.ndjson` y visible en el paso de `doctor`, no
+oculto detrás de "No output generated.". Es lo que hace aceptable cerrar sin la confirmación
+programada: el peor caso pasó de "fallo mudo, otra vez" a "fallo con motivo, corregible en la
+siguiente iteración".
+
+Etiqueta de fase 5 que incluye este arreglo: `v0.5.4` (ver ADR-022, escrito porque el cambio toca
+`src/model/` fuera de las tres líneas que `docs/plans/fase-5-ejecucion-programada.md` nombraba como
+únicas excepciones).
 
 **Aprendido.** Mismo patrón que la sesión del 2026-08-11 ("contar sin nombrar" en vez de guardar
 la causa real), ahora en una cuarta capa: la llamada al modelo misma, no solo la entrega, las

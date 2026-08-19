@@ -760,3 +760,59 @@ contó no sería un resumen, sería una segunda diaria.
   falta: `state/` es ahora un subdirectorio, y una instancia recién clonada no lo trae (git no
   versiona directorios vacíos).
 - `docs/03-modelo-datos.md` documenta `state/seen--<receta>.json` en vez de `state/seen.json`.
+
+---
+
+## ADR-022 · El tope de tokens de salida es un campo de la receta, y el fallo por corte de salida dice su motivo real
+
+**Estado:** aceptado
+
+**Contexto.** La receta "weekly" (destila varias diarias vía una fuente `archive`) falló el
+2026-08-17 con `model_failed` (código 3): los dos proveedores de la cadena terminaron con el mismo
+mensaje inútil, "No output generated.", del AI SDK. `client.ts` usa `generateText` + `Output.object`
+(ADR-017): cuando `finishReason` no es `"stop"` (aquí, `"length"`, tokens de salida agotados a mitad
+del JSON), el getter `result.output` lanza ese mensaje genérico sin decir el motivo. El tope de
+tokens de salida vivía como una única constante en `client.ts`, igual para cualquier receta, y la
+semanal recolecta bastantes más elementos que una diaria corriente.
+
+**Decisión.** Dos cambios:
+
+1. `model.maxOutputTokens` pasa a ser un campo opcional de la receta (`ModelConfig`). Cuántos
+   tokens de salida hacen falta depende del tamaño de esa receta en concreto (elementos de entrada,
+   secciones a rellenar), no del mecanismo que llama al modelo: es la regla central del proyecto
+   ("si pertenece al dominio, va en la receta"). Ausente, sigue el valor por defecto de `client.ts`.
+2. `client.ts` intercepta `finishReason !== 'stop'` antes de tocar el getter que lanza el error
+   genérico, y guarda el motivo real (`finishReason` y tokens de salida usados) para que
+   `runs.ndjson` distinga "se acabaron los tokens" de "el proveedor rechazó la petición" (R9,
+   RF-G05).
+
+**Por qué entra por ADR.** El plan de fase 5 (`docs/plans/fase-5-ejecucion-programada.md`) prohibía
+tocar `src/model/` salvo las tres líneas nombradas de H1, H2 y H3. Este cambio nace de un incidente
+real de producción (el primer lunes con cron activo) y no es ninguna de esas tres, así que amplía el
+blueprint vigente y necesita su propia decisión registrada, no una nota suelta en la bitácora.
+
+**Alternativas consideradas y por qué no:**
+
+1. **Subir la constante fija de `client.ts`** para cubrir el peor caso conocido (la semanal).
+   Descartada: el tamaño de la receta es justo el tipo de decisión que la constitución manda sacar
+   del mecanismo, y una constante subida a mano para el peor caso de hoy vuelve a fallar el día que
+   otra receta sea más grande.
+2. **Dejar el mensaje genérico del SDK y confiar solo en el reintento existente.** Descartada:
+   reintentar contra un presupuesto de tokens insuficiente sin subirlo repite el mismo fallo
+   indefinidamente, y el registro seguiría sin decir el motivo real, contradiciendo R9
+   directamente.
+
+**Consecuencias de código:**
+
+- `src/recipe/types.ts`: `ModelConfig.maxOutputTokens?: number`, común a todos los eslabones de la
+  cadena (no varía por proveedor, a diferencia de `reasoningEffort`).
+- `src/recipe/validate.ts`: rechaza el campo si está presente y no es un entero mayor que cero.
+- `src/model/synthesize.ts`: pasa el valor a `generateReport` solo si la receta lo declara.
+- `src/model/client.ts`: intercepta `finishReason !== 'stop'` con un mensaje que incluye el motivo
+  y los tokens de salida usados.
+- `recipes/example/recipe.yaml`: comentario que documenta el campo, sin activarlo.
+
+**Deuda declarada.** La hipótesis (agotamiento de tokens de salida, `finishReason: "length"`) no
+quedó confirmada al 100% sobre el incidente real del 17: el registro de esa ejecución no guardaba
+el dato porque el mensaje genérico no lo exponía. Se confirma con la siguiente ejecución programada
+de la receta semanal (2026-08-24).

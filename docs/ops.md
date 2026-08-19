@@ -111,9 +111,14 @@ para y replantea.
 - [x] Secretos en el repositorio de la instancia
 - [x] **Primera ejecución de verdad:** el informe llega por correo, se archiva y el commit vuelve
       solo. Relanzar el mismo día sale con 0 sin sobrescribir. Hecho el 2026-08-11, ver bitácora
-- [ ] Comprobar que dos ejecuciones simultáneas **se serializan y ninguna muere cancelada**
-- [ ] **Rodaje en sombra:** las dos versiones en paralelo varios días, comparando informes
-- [ ] Apagar el sistema anterior **solo** cuando el nuevo gane esa comparación
+- [x] Comprobar que dos ejecuciones simultáneas **se serializan y ninguna muere cancelada**. Dos
+      disparos manuales seguidos (#21, #22): el segundo quedó "Pending" mientras el primero
+      corría, nunca "Cancelled", y terminó al arrancar tras el primero
+- [x] **Rodaje en sombra:** las dos versiones en paralelo varios días, comparando informes. Desde el
+      2026-08-11: el dueño confirma que el nuevo cubre más y con noticias más relevantes que el
+      anterior
+- [x] Apagar el sistema anterior **solo** cuando el nuevo gane esa comparación. Decisión del dueño,
+      2026-08-19: el nuevo gana la comparación, se apaga
 
 > El cron semanal está declarado y activo desde el 2026-08-17, primer lunes con una semana entera de
 > diarias que destilar. Antes de esa fecha destilaría un archivo vacío y saldría con código 2.
@@ -133,10 +138,11 @@ para y replantea.
 
 ## Tareas previas que no dependen de este plan
 
-- [ ] **Poner una credencial real de un segundo proveedor en el sistema anterior.** Diez minutos, y
+- [x] **Poner una credencial real de un segundo proveedor en el sistema anterior.** Diez minutos, y
       recupera la mayoría de los días perdidos mientras se construye esto. Ver ADR-009
-- [ ] Rotar las tres credenciales del sistema anterior, recordando que su fichero de secretos gana a
-      las variables de entorno
+- [x] Rotar las tres credenciales del sistema anterior, recordando que su fichero de secretos gana a
+      las variables de entorno. Hecho por el dueño, 2026-08-19: nunca estuvieron en ningún sitio
+      público, solo en local, pero se rotan igual al apagarlo
 
 ---
 
