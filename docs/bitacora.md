@@ -61,6 +61,34 @@ hacer: el código dice cómo quedó, pero no qué se intentó antes ni qué se d
 
 ## Entradas
 
+## 2026-08-19 · Fase 5 · La semanal se quedó sin tokens de salida, y el SDK no decía por qué
+
+**Hecho.** La receta "weekly" falló el 2026-08-17 con `model_failed` (código 3): los dos
+proveedores de la cadena, agotados, con el mismo mensaje inútil, "No output generated.", del AI
+SDK. `client.ts` usa `generateText` + `Output.object` (ADR-017): cuando `finishReason` no es
+`"stop"`, el getter `result.output` lanza ese mensaje genérico sin más contexto. Dos cambios: (1)
+`model.maxOutputTokens` pasa a ser un campo de dominio de la receta, no la constante fija que era,
+porque cuántos tokens de salida hacen falta depende del tamaño de esa receta en concreto (la
+semanal destila varias diarias vía una fuente `archive`, y recolecta bastantes más elementos); (2)
+`client.ts` intercepta el caso `finishReason !== 'stop'` antes de tocar el getter que lanza el
+error genérico, y guarda el motivo real (`finishReason` y tokens de salida usados) para que
+`runs.ndjson` lo distinga de cualquier otro fallo.
+
+**Sorpresas de terceros.** El AI SDK no expone ningún detalle cuando `finishReason` no es
+`"stop"`: acceder a `result.output` lanza "No output generated." sin nombrar el motivo ni los
+tokens consumidos, indistinguible de un rechazo del proveedor o de cualquier otro fallo de
+cliente.
+
+**Deuda.** La hipótesis (tokens de salida agotados, `finishReason: "length"`) no quedó confirmada
+al 100% sobre el incidente real del 17: el log de esa ejecución ya no tiene el dato, porque el
+mensaje genérico no lo guardaba. Queda para la próxima ejecución programada de la semanal
+(el lunes) comprobar si el nuevo registro confirma la causa y si el valor declarado en
+`model.maxOutputTokens` basta.
+
+**Aprendido.** Mismo patrón que la sesión del 2026-08-11 ("contar sin nombrar" en vez de guardar
+la causa real), ahora en una cuarta capa: la llamada al modelo misma, no solo la entrega, las
+fuentes o la cadena de proveedores.
+
 ## 2026-08-11 · Fase 5 · La instancia en marcha, y tres capas que contaban sin nombrar
 
 **Hecho.** T5, T6 y casi todo T7. La instancia privada existe, con las dos recetas reales (30

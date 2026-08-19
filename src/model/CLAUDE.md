@@ -87,7 +87,10 @@ Al ejecutar:
 ## Parámetros
 
 - **Temperatura baja.** Esto no es escritura creativa: es síntesis con estructura fija.
-- **Límite de tokens de salida acotado** y coherente con la cardinalidad máxima de las secciones.
+- **Límite de tokens de salida acotado**, con un valor por defecto en `client.ts`
+  (`DEFAULT_MAX_OUTPUT_TOKENS`) y ajustable por receta (`model.maxOutputTokens`, dominio: depende
+  del tamaño de esa receta en concreto, no del proveedor). Coherente con la cardinalidad máxima de
+  las secciones.
 - **Tope de elementos de entrada** aplicado antes de llamar, nunca después.
 - **`maxRetries: 0` en la llamada al SDK (`client.ts`), a propósito.** Es una sola capa de
   reintento, la nuestra (`retry.ts`), la que ADR-009 describe. El reintento por defecto del SDK no

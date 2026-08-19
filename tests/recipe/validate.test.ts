@@ -295,6 +295,34 @@ test('"reasoningEffort" fuera del conjunto válido produce un error que nombra e
   assert.ok(campos(issues).includes('model.fallbacks[0].reasoningEffort'));
 });
 
+test('"maxOutputTokens" declarado como entero positivo no produce error', () => {
+  const issues = validateRecipeFields({
+    ...validBase,
+    model: { provider: 'google', id: 'gemini-test', maxOutputTokens: 8192 },
+    sources: [],
+    window: { days: 30 },
+    scoring: { recencyWeight: 1, topicsWeight: 1 },
+    caps: { maxItems: 10, perSourceMaxPercent: 50 },
+  });
+
+  assert.deepEqual(issues, []);
+});
+
+test('"maxOutputTokens" no numérico o no positivo produce un error que nombra el campo', () => {
+  for (const maxOutputTokens of [0, -1, 1.5, 'mucho']) {
+    const issues = validateRecipeFields({
+      ...validBase,
+      model: { provider: 'google', id: 'gemini-test', maxOutputTokens },
+      sources: [],
+      window: { days: 30 },
+      scoring: { recencyWeight: 1, topicsWeight: 1 },
+      caps: { maxItems: 10, perSourceMaxPercent: 50 },
+    });
+
+    assert.ok(campos(issues).includes('model.maxOutputTokens'), `falló para ${maxOutputTokens}`);
+  }
+});
+
 test('un eslabón que repite el proveedor principal produce un error', () => {
   const issues = validateRecipeFields({
     ...validBase,

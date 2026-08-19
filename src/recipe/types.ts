@@ -50,6 +50,11 @@ export interface ProviderSpec {
 /** `provider` e `id` siguen siendo el principal (fase 1); `fallbacks` es la cadena, en orden. */
 export interface ModelConfig extends ProviderSpec {
   readonly fallbacks?: readonly ProviderSpec[];
+  /** Tope de tokens de salida de la llamada, común a todos los eslabones de la cadena (no varía
+   * por proveedor, como sí hace `reasoningEffort`). Depende del tamaño de esta receta en concreto
+   * (cuántos elementos entran, cuántas secciones hay que rellenar): una semanal que destila varias
+   * diarias necesita más margen que una diaria. Ausente ⇒ el valor por defecto de `client.ts`. */
+  readonly maxOutputTokens?: number;
 }
 
 /**

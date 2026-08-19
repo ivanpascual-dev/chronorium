@@ -425,6 +425,18 @@ function validateModel(
 
   const principal = validateProviderSpec(raw, 'model', providerRegistry, issues);
 
+  if (
+    raw.maxOutputTokens !== undefined &&
+    (typeof raw.maxOutputTokens !== 'number' ||
+      !Number.isInteger(raw.maxOutputTokens) ||
+      raw.maxOutputTokens <= 0)
+  ) {
+    issues.push({
+      campo: 'model.maxOutputTokens',
+      motivo: 'si se declara, "maxOutputTokens" debe ser un entero mayor que cero',
+    });
+  }
+
   if (raw.fallbacks === undefined) {
     return;
   }

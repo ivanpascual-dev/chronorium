@@ -59,7 +59,13 @@ export async function synthesize(options: SynthesizeOptions): Promise<SynthesisR
         throw new Error(`falta la credencial "${apiKeyEnv}"`);
       }
       const model = await factory.create(spec, apiKey);
-      return generateReport({ model, prompt, derived });
+      const { maxOutputTokens } = options.recipe.model;
+      return generateReport({
+        model,
+        prompt,
+        derived,
+        ...(maxOutputTokens !== undefined ? { maxOutputTokens } : {}),
+      });
     },
     retry,
   );
