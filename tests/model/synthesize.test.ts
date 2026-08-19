@@ -214,6 +214,37 @@ test('una salida que no valida contra el esquema no se rellena y cuenta como fal
   assert.equal(primaryAttempt?.attempts, 1);
 });
 
+test('un modelo que se queda sin tokens de salida deja en el registro el motivo real, no el genérico del SDK', async () => {
+  const cutShort = new MockLanguageModelV4({
+    doGenerate: async () => ({
+      content: [{ type: 'text', text: '{"pulse": {"text": "a medi' }],
+      finishReason: { unified: 'length', raw: undefined },
+      usage: {
+        inputTokens: { total: 100, noCache: 100, cacheRead: undefined, cacheWrite: undefined },
+        outputTokens: { total: 4096, text: 4096, reasoning: undefined },
+      },
+      warnings: [],
+    }),
+  });
+  const registry = registryWith({
+    primary: cutShort,
+    backup: sequenceModel([failureStep(apiError(500))]),
+  });
+
+  let caught: unknown;
+  try {
+    await synthesize({ recipe, items, secret, registry, retry: { ...fastRetry, maxAttempts: 1 } });
+  } catch (error) {
+    caught = error;
+  }
+
+  assert.ok(caught instanceof NoProviderSucceededError);
+  const [primaryAttempt] = caught.providersTried;
+  assert.equal(primaryAttempt?.outcome, 'failed');
+  assert.match(primaryAttempt?.reason ?? '', /"length"/);
+  assert.match(primaryAttempt?.reason ?? '', /4096/);
+});
+
 test('"model.maxOutputTokens" de la receta llega tal cual a la llamada al modelo', async () => {
   const seen: (number | undefined)[] = [];
   const capturing = new MockLanguageModelV4({

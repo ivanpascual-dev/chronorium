@@ -34,5 +34,17 @@ export async function generateReport(options: GenerateReportOptions): Promise<un
     maxRetries: 0,
   });
 
+  // Si el modelo no terminó con "stop" (se quedó sin tokens de salida, un filtro de contenido lo
+  // cortó...), el SDK deja `result.output` vacío y el acceso de abajo lanzaría un error genérico
+  // sin motivo ("No output generated."). Se intercepta aquí para que el motivo real llegue al
+  // registro de ejecuciones (RF-G05, R9): sin esto, "se acabaron los tokens de salida" y "el
+  // proveedor rechazó la petición" son indistinguibles en runs.ndjson.
+  if (result.finishReason !== 'stop') {
+    throw new Error(
+      `el modelo terminó con motivo "${result.finishReason}" antes de completar la salida ` +
+        `(tokens de salida usados: ${result.usage.outputTokens ?? 'desconocido'})`,
+    );
+  }
+
   return result.output;
 }
