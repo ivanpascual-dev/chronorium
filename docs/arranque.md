@@ -90,7 +90,7 @@ jobs:
     # repositorio, sin relación entre ellos. Este job hace checkout de TU repositorio (el de la
     # instancia) y, por separado, de la herramienta desde aquí, en un directorio aparte: son dos
     # cosas independientes. Solo cambia esta línea si de verdad mantienes tu propio fork del motor.
-    uses: ivanpascual-dev/chronorium/.github/workflows/run.yml@v0.5.4
+    uses: ivanpascual-dev/chronorium/.github/workflows/run.yml@v1.0.0
     with:
       recipe: daily
     # Pasa el almacén de secretos entero; el motor solo lee, por nombre, los que tu receta declara.

@@ -137,10 +137,10 @@ para y replantea.
 - [x] Punto 10 del criterio de terminada (la prueba del lector de otro ámbito). Comprobación floja:
       sin persona externa disponible, el dueño leyó `README.es.md`, `docs/07-escribir-una-receta.md`
       y `docs/arranque.md` él mismo. Sin hallazgos. Ver `bitacora.md`, entrada 2026-08-20
-- [ ] `/pre-lanzamiento` y etiqueta `v1.0.0`. **Al etiquetar**, actualizar también el pin de
-      `docs/arranque.md` (`uses: ivanpascual-dev/chronorium/...@v0.5.4` → `@v1.0.0`): hasta ese
-      momento el fichero se deja apuntando a `v0.5.4`, el último tag que existe de verdad, aunque
-      `package.json` ya declare `"version": "1.0.0"`. Nunca un tag que todavía no existe
+- [x] `/pre-lanzamiento` y etiqueta `v1.0.0`. Veredicto: publicable, con un único punto abierto (la
+      receta semanal no tiene confirmación vía cron real tras el fix de tokens de salida de Fase 5;
+      esa confirmación cae el 2026-08-24). El dueño decide etiquetar sin esperarla, 2026-08-20. Pin
+      de `docs/arranque.md` actualizado a `@v1.0.0`
 
 ---
 
