@@ -1,0 +1,20 @@
+[
+  {
+    "tag_name": "ai@7.0.68",
+    "name": "ai@7.0.68",
+    "html_url": "https://github.com/vercel/ai/releases/tag/ai%407.0.68",
+    "body": "Adds an `Experimental_Agent` helper for building multi-step LLM agent loops, plus assorted bugfixes.",
+    "published_at": "2026-08-18T10:00:00Z",
+    "draft": false,
+    "prerelease": false
+  },
+  {
+    "tag_name": "ai@7.0.67",
+    "name": "ai@7.0.67",
+    "html_url": "https://github.com/vercel/ai/releases/tag/ai%407.0.67",
+    "body": "Patch release: fixes a streaming edge case in the provider chain.",
+    "published_at": "2026-08-16T09:00:00Z",
+    "draft": false,
+    "prerelease": false
+  }
+]

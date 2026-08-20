@@ -1,7 +1,19 @@
 language: es
+
+# ATENCIÓN, esto no es prosa y por eso parece una lista de palabras sueltas.
+#
+# `src/rank/score.ts` busca cada tema como SUBCADENA LITERAL dentro del título y el resumen,
+# normalizados (minúsculas, sin acentos). Un tema escrito como frase ("modelos de lenguaje y
+# agentes de IA") no aparece nunca así en un titular real: aportaría cero a la puntuación y el
+# orden quedaría decidido solo por la recencia. Medido el 2026-08-19 en este mismo ejemplo, era
+# exactamente lo que pasaba (docs/plans/fase-6-publicacion.md, trampa 1).
+#
+# La puntuación de temas es (temas que aparecen / temas totales): con dos temas cortos, cada
+# acierto vale la mitad. Antes de añadir uno, compruébalo contra un titular real de tus fuentes.
 topics:
-  - modelos de lenguaje y agentes de IA
-  - herramientas y frameworks para desarrolladores
+  - agent
+  - LLM
+
 model:
   provider: google
   id: gemini-3.6-flash
@@ -22,11 +34,16 @@ model:
   #     # Para otro proveedor remoto compatible (DeepSeek, Groq, OpenRouter) o un modelo local,
   #     # usa provider: openai-compatible, con baseUrl obligatorio.
 
-# Fuentes públicas reales, sin credencial más allá de la del modelo (RF-B04).
+# Fuentes públicas reales, sin credencial más allá de la del modelo (RF-B04). Las cuatro URLs se
+# comprobaron una a una contra la red el 2026-08-19, es la regla de la constitución aplicada a
+# fuentes (defecto D-14 del sistema anterior: prometía 20 fuentes, entregaba 8).
 sources:
-  - id: hn-agentes-ia
+  # `?q=AI+agent` (y cualquier variante con "agent" en la búsqueda) da 502 de forma reproducible
+  # en hnrss.org, comprobado el 2026-08-19; `?q=LLM` sí funciona (200, contenido real). No es un
+  # capricho de redacción: se comprueba la query exacta, no solo el dominio.
+  - id: hn-llm
     type: feed
-    url: https://hnrss.org/newest?q=AI+agent
+    url: https://hnrss.org/newest?q=LLM
 
   - id: devto-ia
     type: json-api
@@ -39,8 +56,10 @@ sources:
 
   - id: radar-frameworks-ia
     type: repo-search
-    query: 'topic:llm-agents language:typescript'
+    query: "topic:llm-agents language:typescript"
 
+  # Comprobado el 2026-08-19: los últimos lanzamientos de ambos repositorios son estables (ni
+  # borrador ni prelanzamiento), así que esta fuente no da cero por publicar solo canary.
   - id: lanzamientos-stack
     type: repo-releases
     repos:
@@ -56,14 +75,21 @@ scoring:
 
 caps:
   maxItems: 60
-  perSourceMaxPercent: 40
+  # OJO CON ESTE NÚMERO, no significa lo que parece: `src/rank/caps.ts` lo calcula sobre el
+  # conjunto YA FILTRADO por ventana y memoria, no sobre `maxItems`, y con `Math.floor`. Con las
+  # cuatro fuentes de arriba el pool ronda la docena de elementos; `40` (el valor anterior de este
+  # ejemplo) no recortaba nada, porque el 40% de una fuente de cuatro elementos redondea a más de
+  # los que esa fuente aporta. `20` sí recorta: floor(14 * 0.20) = 2, así que una fuente que
+  # aportara cuatro elementos se queda en dos. Y no bajes de aquí sin comprobar el borde: con un
+  # pool tan pequeño, un porcentaje menor redondea a cero y descarta la fuente entera.
+  perSourceMaxPercent: 20
 
 # El asunto del correo. Dos sustituciones y solo dos: {recipe} (el nombre del directorio de la
 # receta) y {date} (la fecha del informe, AAAA-MM-DD). Todo lo demás es texto literal, así que el
 # nombre del agente se escribe aquí, no en el código: el motor no sabe cómo se llama tu agente.
 # Sin esta línea, el asunto queda en "<receta> · <fecha>", que no es prosa y por tanto no depende
 # del idioma de la receta.
-subject: 'Chronorium · {recipe} · {date}'
+subject: "Chronorium · {recipe} · {date}"
 
 # Cero canales activos es válido (RF-B04, RF-H04): un desconocido con solo la credencial del
 # modelo obtiene su informe en el archivo, y activa el correo (o cualquiera de los otros dos)
@@ -80,7 +106,7 @@ delivery:
 
   - id: telegram
     enabled: false
-    chatId: '000000000'
+    chatId: "000000000"
     # Activarlo exige TELEGRAM_BOT_TOKEN en el entorno. Se queda desactivado a propósito: existe
     # para demostrar que el contrato de notificadores funciona con una segunda forma de credencial
     # (ADR-011), no porque haga falta para el arranque rápido.

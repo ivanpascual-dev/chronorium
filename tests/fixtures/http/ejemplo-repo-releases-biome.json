@@ -1,0 +1,20 @@
+[
+  {
+    "tag_name": "@biomejs/biome@2.5.9",
+    "name": "@biomejs/biome@2.5.9",
+    "html_url": "https://github.com/biomejs/biome/releases/tag/%40biomejs%2Fbiome%402.5.9",
+    "body": "Fixes a formatter crash and improves the linter's suggestion engine.",
+    "published_at": "2026-08-17T12:00:00Z",
+    "draft": false,
+    "prerelease": false
+  },
+  {
+    "tag_name": "@biomejs/biome@2.5.8",
+    "name": "@biomejs/biome@2.5.8",
+    "html_url": "https://github.com/biomejs/biome/releases/tag/%40biomejs%2Fbiome%402.5.8",
+    "body": "Minor performance improvements to the formatter.",
+    "published_at": "2026-08-13T08:00:00Z",
+    "draft": false,
+    "prerelease": false
+  }
+]

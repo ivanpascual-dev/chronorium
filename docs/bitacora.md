@@ -61,6 +61,198 @@ hacer: el código dice cómo quedó, pero no qué se intentó antes ni qué se d
 
 ## Entradas
 
+## 2026-08-20 · Fase 6 · T10 cronometrado, `arranque.md` recortado a la instancia, atajos con IA, y el punto 10 con la comprobación floja
+
+**Hecho:**
+
+- **T10.** El dueño ejecutó la ruta del desconocido de verdad: cuenta de GitHub distinta, fork,
+  credencial, `pnpm cli run --recipe example`, informe recibido. **2:20**, sobre el objetivo de
+  cinco minutos (`RF-H04`). Anotado en `docs/ops.md`.
+- **`docs/arranque.md` se reescribió por completo.** Las secciones 1-6 (cómo nace el propio
+  repositorio motor, Fase 0) se eliminaron: nadie las va a repetir, el porqué de cada decisión ya
+  vive en los ADR (ADR-001/007/008/014, que no se reescriben nunca) y lo que pasó de verdad ya está
+  en esta misma bitácora, entrada `2026-08-07`. El fichero queda reducido a lo que antes era solo
+  la sección 7 (la instancia), con un título nuevo, "La instancia de Chronorium". Se actualizaron
+  las referencias cruzadas en `docs/README.md`, `/CLAUDE.md`, `docs/ops.md` y el comentario de
+  `scripts/check-docs.ts` que documentaba la mezcla de públicos que ya no existe.
+- **Dos atajos con IA, uno por cada mitad del camino.** `docs/07-escribir-una-receta.md` y
+  `docs/arranque.md` ganaron cada uno una sección "El atajo: que tu IA te [la monte/guíe]", con un
+  prompt copia-pega listo para pegar en cualquier asistente junto con la propia guía. El de la
+  receta pregunta por temas, fuentes, cadencia, canal, secciones y persona, y remite a la guía
+  (nunca repite) las reglas exactas y las dos trampas medidas, para no crear una segunda copia de
+  hechos que `check:docs` no vigila. El de la instancia rellena `briefing.yml` con el usuario y las
+  horas de cron, y guía secreto a secreto solo por los que aplican según lo que declaró la receta.
+  La guía de la receta también gana un cierre explícito ("Y ahora, ¿dónde va esto?") que remite a
+  `docs/arranque.md`: antes no cerraba el círculo hacia la instancia. Ambos README enlazan ahora a
+  `docs/arranque.md` desde "Learn more"/"Para saber más", cosa que no hacían.
+- **Punto 10 del criterio de terminada, comprobación floja.** No había ninguna persona externa
+  disponible en el momento, así que se aplicó la alternativa que el propio plan prevé
+  (`docs/plans/fase-6-publicacion.md:460-464`): el dueño leyó `README.es.md`,
+  `docs/07-escribir-una-receta.md` y `docs/arranque.md` él mismo, buscando cualquier frase que solo
+  se entienda sabiendo ya la respuesta. Sin hallazgos.
+- **`@fiel-al-plan` encontró un contrato de T9 sin cumplir del todo.** `check-docs.ts` calculaba
+  `exampleSourceCount` (cuántas fuentes declara `recipes/example/recipe.yaml`) y lo imprimía por
+  consola, pero nunca lo comparaba contra nada documentado: el README afirmaba "four live public
+  sources"/"cuatro fuentes públicas vivas" en prosa, en palabra y no en dígito, así que nada
+  detectaría la divergencia si una fase futura cambia el número de fuentes del ejemplo sin tocar
+  esa frase (D-14, exactamente el defecto que este script existe para cazar). Se añadió
+  `checkExampleSourceCount` (mismo patrón que `checkExitCodes`: dígito entre backticks bajo un
+  marcador `<!-- check-docs:example-source-count -->`), se cambió "four"/"cuatro" por el dígito
+  marcado en ambos README, y se añadieron sus tres tests.
+- **Dos hallazgos menores de la misma revisión, corregidos de paso.** `docs/08-extender-el-motor.md`
+  enlazaba a `docs/02-arquitectura.md#103` (ancla de número de línea, que ningún renderizador de
+  Markdown resuelve); se cambió a `#contratos-de-extensión`, el ancla real del encabezado.
+  `docs/glosario.md` describía el mecanismo de `checkGlossaryCoverage` de forma inexacta (decía que
+  vigilaba que ninguna palabra de jerga apareciera en las guías sin entrada aquí; en realidad
+  comprueba que la lista fija `JARGON_TERMS` del script tenga entrada aquí, no que las guías eviten
+  jerga sin definir); se corrigió la frase.
+- **`docs/arranque.md` apuntaba `briefing.yml` a un fork que no hace falta.** La plantilla decía
+  `uses: <tu-usuario>/chronorium/...@v0.5.4`, dando a entender que había que forkear el motor a la
+  cuenta propia. Verificado contra la documentación oficial de GitHub Actions y leyendo el propio
+  `.github/workflows/run.yml`: un workflow reutilizable se llama desde cualquier repositorio sin
+  relación de fork, y `run.yml` ya está diseñado así (hace checkout de la instancia y, por
+  separado, de la herramienta desde donde apunte el `uses:`, en un directorio aparte). Forkear
+  además es peor: el fork queda congelado en las etiquetas que existían al forkear. Se cambió la
+  línea a `ivanpascual-dev/chronorium` (el repositorio original, ya citado como excepción pública
+  legítima en `src/cli/run.ts`), con un comentario explicando por qué no es un placeholder y qué
+  hacer si de verdad se mantiene un fork propio del motor.
+- **El README llevaba el ejemplo de juguete como protagonista.** "Quickstart" (fork + ejecutar
+  `recipes/example` en local) aparecía antes que cualquier mención a escribir la receta propia o
+  montar una instancia real, cuando eso último es lo que la mayoría busca de verdad. Se añadió una
+  sección nueva, "Get your own instance"/"Monta tu propia instancia", como segundo bloque (justo
+  tras la captura del informe real), con los dos pasos y el aviso explícito de que no hace falta
+  fork para ninguno. El antiguo Quickstart se conserva íntegro (sigue siendo la ruta que mide
+  `RF-H04`, ya cronometrada en T10) pero reetiquetado como "Try it first, in five minutes"/"Pruébalo
+  primero, en cinco minutos": una prueba opcional, no el camino principal. Mismo cambio en los dos
+  README, con paridad de apartados y de bloques de consola comprobada por `check:docs`.
+
+**Se desvió:**
+
+- El punto 10 se amplió de palabra respecto al plan original: no solo "escribir la receta", sino
+  también levantar la instancia (`docs/arranque.md`), porque ese es el camino real que sigue
+  alguien que quiere usar esto de verdad, no solo probar el ejemplo. Decisión del dueño, no del
+  plan original.
+- Queda pendiente, aparte y sin bloquear el cierre de esta fase ni la etiqueta `v1.0.0`, una prueba
+  real con una persona externa (la pareja del dueño) usando el repositorio ya publicado con los dos
+  atajos de IA. Si encuentra algo, se corrige después como una actualización normal, no como una
+  condición para publicar.
+
+**Deuda:** T11 (`/pre-lanzamiento` y `v1.0.0`) sigue pendiente, para el dueño.
+
+**Aprendido:** un documento que mezcla dos públicos por sección (`arranque.md` 1-6 frente a la 7)
+parece una separación razonable hasta que se pregunta para qué sirve hoy la mitad que nadie va a
+repetir; la respuesta honesta era "para nada", y el porqué de cada decisión ya tenía su sitio
+permanente en los ADR. Guardar la misma información en dos formatos (un runbook de comandos y un
+registro de decisiones) es duplicación aunque no lo parezca a primera vista.
+
+## 2026-08-19 · Fase 6 · El ejemplo arreglado, las guías, `check:docs`, y dos hallazgos de producción
+
+**Hecho:** los tramos A, B y C del plan (`docs/plans/fase-6-publicacion.md`), construidos y en verde.
+
+- **T1/T2.** Cuatro guardas nuevas en `tests/scripts/check-receta-ejemplo.ts` (temas que casan de
+  verdad, el orden decidido por temas y no solo por recencia, `perSourceMaxPercent` recortando sin
+  redondear a cero, ninguna fuente exigiendo secreto propio) entraron en rojo con la receta de
+  ayer y en verde con la de hoy. `recipes/example` reescrita: `topics: [agent, LLM]` (términos
+  literales, no frases), las cuatro fuentes de red verificadas contra la API real el mismo día,
+  `caps.perSourceMaxPercent` recalculado con su porqué en el YAML, y `sections.yaml` con la
+  estructura de seis secciones (cuatro condicionales) tomada de una receta real en producción, sin
+  ninguno de sus temas.
+- **T3.** El dueño ejecutó `pnpm cli run --recipe example` con credencial real y las cuatro
+  fuentes vivas: informe generado, archivado y correo enviado. Juicio del dueño: aprobado para
+  portada. Captura en `docs/assets/informe-ejemplo.png`, extracto en `docs/informe-ejemplo.md`.
+- **T4-T7.** `README.md` (inglés, canónico) y `README.es.md` (traducción con paridad de apartados
+  y de bloques de consola, comprobada por `check:docs`). `docs/glosario.md` (22 términos),
+  `docs/07-escribir-una-receta.md` (sin código, con las dos trampas medidas como advertencias en
+  su campo) y `docs/08-extender-el-motor.md` (para quien programa), enlazadas desde `docs/README.md`
+  con su público declarado. `docs/arranque.md` sección 7 reescrita con la forma real de una
+  instancia (`briefing.yml` bloque por bloque, tabla de secretos con qué pasa sin cada uno),
+  tomada de `chronorium-ivan/README.md` como plantilla, sin ningún valor real.
+- **T8/T9.** `scripts/check-docs.ts` y `tests/docs/check-docs.test.ts` (19 casos). Doce
+  afirmaciones verificadas contra el código real: versión de Node, variables de entorno, códigos
+  de salida, tipos de lector, ids de notificador, nombres de proveedor, comandos del CLI, cuántas
+  fuentes promete el ejemplo, enlaces rotos, paridad de los dos README, cobertura del glosario y
+  declaración de público. `pnpm run check:docs` en verde sobre la documentación real; la guarda de
+  `ci.yml` se activó sola al añadir el script a `package.json`.
+
+**Se desvió:**
+
+- **La primera versión de `check:docs` parseaba prosa libre con expresiones regulares** para
+  encontrar "la lista de tipos de lector" o "la tabla de códigos de salida", y producía decenas de
+  falsos positivos: capturaba `engines.node >= 6` (un requisito de `nodemailer`, no de Chronorium)
+  como "menciona Node 6", y una vez dentro de una sección marcada, seguía leyendo hasta el
+  siguiente encabezado `##`, arrastrando secciones enteras no relacionadas. Se sustituyó por
+  comentarios HTML explícitos de apertura y cierre (`<!-- check-docs:marker -->` /
+  `<!-- /check-docs:marker -->`) en los documentos, el mismo principio que R1 (delimitar en vez de
+  adivinar) aplicado a la propia documentación.
+  - `PLACEHOLDER_CREDENTIALS` (una constante real de `src/model/chain.ts`, citada por nombre en
+    `docs/05-seguridad-legal.md`) dio un falso positivo porque el extractor de "variables de
+    entorno conocidas" solo indexaba strings entre comillas, no identificadores de código. Se
+    amplió a cualquier `MAYUSCULA_CON_GUION` que aparezca en `src/`, sea string o constante.
+- **`hnrss.org/newest?q=AI+agent` (la fuente de feed del ejemplo original) da 502 de forma
+  reproducible**, comprobado en vivo contra la API el 2026-08-19; `?q=LLM` sí responde 200. No es
+  el mismo fallo que ya tiene anotado `chronorium-ivan/recipes/daily/recipe.yaml` (ese es sobre
+  `hnrss.org/newest?q=LLM&points=20`, la combinación de búsqueda y umbral de votos), pero es la
+  misma familia de problema: hnrss.org falla con ciertas combinaciones de parámetros, no con el
+  dominio en general. Se cambió el tema del feed a `LLM`, que además es uno de los dos `topics` de
+  la receta reescrita.
+- **`repo-search` (la API de búsqueda de GitHub) dio 403 al ejecutar T3**, por límite de tasa sin
+  token (10 peticiones/minuto): agotado por las verificaciones manuales de esta misma sesión contra
+  esa URL. No es un defecto del ejemplo ni de la receta: el sistema lo manejó como está diseñado
+  (código 0, aviso agregado con el motivo, el informe salió igual con las otras tres fuentes). Se
+  deja anotado en `docs/07-escribir-una-receta.md` de forma indirecta (la tabla de secretos de
+  `docs/arranque.md` explica que un token de GitHub sube el cupo de 60/h anónimo a 5000/h), pero no
+  se corrige aquí: no es un hallazgo de `src/`, es el comportamiento esperado de una fuente pública
+  sin credencial.
+- **`.gitignore` no cubría `data/`**, el directorio donde escribe el "Arranque rápido" del README
+  al ejecutar `pnpm cli run --recipe example` en local. No estaba en la lista de ficheros que toca
+  la fase, pero seguir el propio README tal cual lo escribí habría ensuciado el checkout de
+  cualquiera que lo probara. Añadido con su porqué en el propio `.gitignore`.
+- **`main()` se autoejecutaba como efecto colateral de importar** `collectExample`/`FIXED_NOW` (de
+  `check-receta-ejemplo.ts`) o las funciones puras de `check-docs.ts` desde sus tests: ambos
+  scripts tenían `main().catch(...)` a nivel de módulo sin guarda. En `check-receta-ejemplo.ts` no
+  se notó (nunca falló), pero en `check-docs.ts` sí, y mató el proceso de test entero antes de que
+  `node:test` pudiera reportar nada. Se añadió la guarda estándar
+  (`fileURLToPath(import.meta.url) === process.argv[1]`) a los dos scripts.
+
+**Deuda:** T10 (cronometrar la ruta del desconocido en cuenta limpia) y T11 (`/pre-lanzamiento` y
+`v1.0.0`) quedan para el dueño, igual que el punto 10 del criterio de terminada (la prueba del
+lector de otro ámbito). Ninguno de los tres lo puede dar por bueno un agente.
+
+**Aprendido:** un marcador explícito en la documentación (`<!-- check-docs:x -->`) cuesta una línea
+y elimina una clase entera de falsos positivos que ninguna heurística sobre prosa libre iba a
+atrapar de forma fiable; vale la pena pagarlo desde el principio en vez de perseguir cada caso raro
+con una regla nueva. Y un límite de tasa de terceros descubierto en producción (el 403 de
+`repo-search` en T3) es la mejor prueba posible de que R7/R9 (reintento de lo recuperable, aviso
+con el patrón) funcionan: el fallo pasó, y el informe salió igual de bueno.
+
+## 2026-08-19 · Fase 5 · Cierre: `@fiel-al-plan` encontró cuatro desvíos, los cuatro resueltos en la misma sesión
+
+**Hecho.** `@fiel-al-plan` dio veredicto "desviado, hay que parar" sobre cuatro puntos, ninguno en
+el código de T0-T4 (ese tramo salió "fiel" letra por letra). Los cuatro se resolvieron antes de
+lanzar `/verifier`, que cerró la fase con veredicto **cerrada con deuda**:
+
+1. **Cuatro commits sin etiquetar** desde `v0.5.3`, incluido el arreglo del incidente de tokens de
+   salida (ver la entrada de abajo). Se cortó y publicó `v0.5.4`.
+2. **`src/model/client.ts` y `src/model/synthesize.ts` tocados fuera de las excepciones que el plan
+   nombraba** (H1/H2/H3), sin ADR. El dueño confirmó que fue una decisión suya, no un desvío
+   accidental: sacar `maxOutputTokens` de una constante fija a un campo opcional de la receta,
+   porque el tamaño de cada receta decide cuánto presupuesto de salida necesita. Se escribió
+   **ADR-022** para dejarlo registrado como decisión, no como nota suelta.
+3. **`docs/ops.md` marcaba "apagar el sistema anterior" como hecho** mientras "rotar sus tres
+   credenciales" seguía sin marcar, y el plan exige la rotación antes del apagado. El dueño confirmó
+   que ambas tareas estaban hechas (las credenciales nunca estuvieron en ningún sitio público, solo
+   en local); se marcaron las dos casillas pendientes de "Tareas previas que no dependen de este
+   plan".
+4. **El apagado se decidió el mismo día que un incidente de la semanal sin confirmar al 100%**
+   (la hipótesis de `finishReason: "length"` solo se había probado en local, no en el cron real). El
+   dueño decidió no esperar a la confirmación programada del 2026-08-24 para cerrar la fase; el
+   riesgo asumido queda escrito en la entrada del incidente, de abajo.
+
+**Aprendido.** `fiel-al-plan` puede señalar un desvío de proceso (tocar código fuera de lo que el
+plan permitía) sin que la decisión de fondo esté mal: aquí el desvío era real (faltaba el ADR), pero
+la decisión que lo causó era correcta y coherente con la regla central del proyecto. La corrección
+no fue deshacer el cambio, fue escribir el ADR que debió ir antes.
+
 ## 2026-08-19 · Fase 5 · La semanal se quedó sin tokens de salida, y el SDK no decía por qué
 
 **Hecho.** La receta "weekly" falló el 2026-08-17 con `model_failed` (código 3): los dos
@@ -79,11 +271,24 @@ error genérico, y guarda el motivo real (`finishReason` y tokens de salida usad
 tokens consumidos, indistinguible de un rechazo del proveedor o de cualquier otro fallo de
 cliente.
 
-**Deuda.** La hipótesis (tokens de salida agotados, `finishReason: "length"`) no quedó confirmada
-al 100% sobre el incidente real del 17: el log de esa ejecución ya no tiene el dato, porque el
-mensaje genérico no lo guardaba. Queda para la próxima ejecución programada de la semanal
-(el lunes) comprobar si el nuevo registro confirma la causa y si el valor declarado en
-`model.maxOutputTokens` basta.
+**Deuda, cerrada por decisión del dueño sin esperar al 2026-08-24.** La hipótesis (tokens de salida
+agotados, `finishReason: "length"`) no quedó confirmada al 100% sobre el incidente real del 17: el
+log de esa ejecución ya no tiene el dato, porque el mensaje genérico no lo guardaba. El dueño
+ejecutó la receta semanal en local con los dos cambios aplicados y el informe salió bien. La
+confirmación estricta (el cron real, programado, sobre el archivo real de la instancia) habría
+llegado el 2026-08-24, pero el dueño decide no esperarla para cerrar la fase.
+
+**Riesgo residual asumido, dicho en voz alta:** si la hipótesis fuera incorrecta y la semanal del
+24 volviera a fallar por presupuesto de salida, ya no sería el fallo mudo del incidente original
+(R9): el segundo cambio de ADR-022 (`client.ts` reporta `finishReason` y tokens usados) hace que
+ese fallo, si ocurre, quede diagnosticado en `runs.ndjson` y visible en el paso de `doctor`, no
+oculto detrás de "No output generated.". Es lo que hace aceptable cerrar sin la confirmación
+programada: el peor caso pasó de "fallo mudo, otra vez" a "fallo con motivo, corregible en la
+siguiente iteración".
+
+Etiqueta de fase 5 que incluye este arreglo: `v0.5.4` (ver ADR-022, escrito porque el cambio toca
+`src/model/` fuera de las tres líneas que `docs/plans/fase-5-ejecucion-programada.md` nombraba como
+únicas excepciones).
 
 **Aprendido.** Mismo patrón que la sesión del 2026-08-11 ("contar sin nombrar" en vez de guardar
 la causa real), ahora en una cuarta capa: la llamada al modelo misma, no solo la entrega, las

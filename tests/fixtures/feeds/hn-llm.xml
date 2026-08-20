@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Hacker News - Newest: &#34;LLM&#34;</title>
+    <link>https://news.ycombinator.com/newest</link>
+    <description>Fixture del ejemplo (T2, fase 6): forma real de https://hnrss.org/newest?q=LLM, contenido representativo.</description>
+    <item>
+      <title>Show HN: A local LLM inference server in one binary</title>
+      <link>https://news.ycombinator.com/item?id=41522001</link>
+      <description>Un binario único que sirve inferencia de un LLM sin dependencias externas.</description>
+      <pubDate>Tue, 18 Aug 2026 09:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Mind Viruses: Self-Propagating Ideas in Multi-Agent LLM Systems</title>
+      <link>https://news.ycombinator.com/item?id=41521884</link>
+      <description>Cómo una idea se propaga sin control entre los agentes de un sistema multi-agente basado en LLM.</description>
+      <pubDate>Mon, 17 Aug 2026 14:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Why most AI agent demos never reach production</title>
+      <link>https://news.ycombinator.com/item?id=41519442</link>
+      <description>Un repaso de los motivos por los que las demos de agentes de IA se quedan en demo.</description>
+      <pubDate>Sat, 15 Aug 2026 11:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>A practical workflow for LLM-assisted development</title>
+      <link>https://news.ycombinator.com/item?id=41516730</link>
+      <description>Un flujo de trabajo concreto para desarrollar con asistencia de un LLM, sin humo.</description>
+      <pubDate>Thu, 13 Aug 2026 08:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

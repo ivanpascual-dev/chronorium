@@ -15,6 +15,7 @@
     "test": "node --test",
     "cli": "node src/cli/main.ts",
     "check:sin-datos-personales": "tsx scripts/check-sin-datos-personales.ts",
+    "check:docs": "tsx scripts/check-docs.ts",
     "check:receta-ejemplo": "tsx scripts/check-receta-ejemplo.ts",
     "bateria": "node --test 'tests/security/**/*.test.ts'",
     "probe:fase1": "tsx scripts/probe-fase1.ts",

@@ -143,7 +143,7 @@ docs/          ver docs/README.md
 | `docs/06-extensibilidad.md`  | lo que se dejó fuera y por qué                                 |
 | `docs/ops.md`                | el plan por fases y su estado                                  |
 | `docs/bitacora.md`           | qué pasó en cada sesión. **No es el plan**                     |
-| `docs/arranque.md`           | inicializar el repositorio desde cero                          |
+| `docs/arranque.md`           | crear tu instancia: `briefing.yml`, secretos, checklist         |
 
 ---
 
