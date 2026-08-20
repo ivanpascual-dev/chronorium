@@ -1,3 +1,11 @@
+# Seis secciones. Las cuatro últimas son condicionales (`condition: non-empty`): la sección sin
+# contenido ese día NO APARECE, así que un día flojo produce un informe corto en vez de uno
+# relleno. Estructura tomada de una receta real en producción (docs/plans/fase-6-publicacion.md,
+# decisión 4); el dominio de esa receta no viaja aquí, solo la forma.
+#
+# El motor no conoce ninguno de estos nombres (R12). Cambiar, quitar o añadir una sección aquí no
+# toca ni una línea de código: el esquema que se le exige al modelo se deriva de este fichero.
+
 sections:
   - key: pulse
     title: "Resumen del día"
@@ -7,7 +15,7 @@ sections:
       - {
           name: text,
           type: string,
-          description: "Resuman de las noticias del dia: qué es ruido y qué es movimiento real.",
+          description: "El día en tres o cuatro frases: qué se ha movido de verdad y qué es ruido. Si el día no da para más, dilo y acaba.",
         }
 
   - key: top
@@ -27,8 +35,8 @@ sections:
           type: string,
           label: "Qué ha pasado",
           description:
-            "Un resumen de la noticia con los hechos: qué se ha anunciado, quién y qué cambia.
-            Sin adjetivos ni entusiasmo, eso va en la línea siguiente.",
+            "Los hechos: qué se ha anunciado, quién y qué cambia respecto a lo que había
+            antes. Sin adjetivos ni entusiasmo, eso va en la línea siguiente.",
         }
       - {
           name: verdict,
@@ -38,6 +46,26 @@ sections:
             "Tu opinión sincera sobre si importa o no importa, y por qué. Decir que algo
             es ruido, o que el anuncio no trae nada nuevo, es una respuesta válida y preferible a
             fabricar interés.",
+        }
+      - { name: link, type: url }
+
+  - key: providers
+    title: "Movimientos de los proveedores"
+    cardinality: list
+    min: 0
+    max: 4
+    condition: non-empty
+    fields:
+      - {
+          name: title,
+          type: string,
+          description: "Qué proveedor y qué ha movido: producto nuevo, cambio de precio, límite de uso, retirada de una versión.",
+        }
+      - {
+          name: change,
+          type: string,
+          label: "Qué cambia",
+          description: "El movimiento en concreto, con números si los hay.",
         }
       - { name: link, type: url }
 
@@ -53,6 +81,42 @@ sections:
           name: action,
           type: string,
           label: "Acción",
-          description: "Qué hacer esta semana con tus manos, no estrategia de empresa.",
+          description: "Qué hacer esta semana con tus manos, no estrategia de empresa. Si no se te ocurre nada que quepa en una tarde, deja la sección vacía.",
+        }
+      - { name: link, type: url }
+
+  - key: stack
+    title: "Novedades de tu stack"
+    cardinality: list
+    min: 0
+    max: 5
+    condition: non-empty
+    fields:
+      - {
+          name: title,
+          type: string,
+          description: "Qué herramienta y qué versión.",
+        }
+      - {
+          name: change,
+          type: string,
+          label: "Qué trae",
+          description: "Lo que cambia de verdad para quien la usa, no el registro de cambios entero. Si es una versión de mantenimiento sin nada reseñable, no la incluyas.",
+        }
+      - { name: link, type: url }
+
+  - key: radar
+    title: "Radar de repositorios"
+    cardinality: list
+    min: 0
+    max: 3
+    condition: non-empty
+    fields:
+      - { name: title, type: string }
+      - {
+          name: why,
+          type: string,
+          label: "Por qué te interesa",
+          description: "Qué hace y qué problema resuelve. Si solo es un repositorio con muchas estrellas y ninguna utilidad concreta, no lo incluyas.",
         }
       - { name: link, type: url }

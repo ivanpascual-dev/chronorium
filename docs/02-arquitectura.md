@@ -180,6 +180,8 @@ anterior. Ver ADR-009.
 
 No hay API HTTP (ADR-008). La superficie del sistema son cuatro comandos.
 
+<!-- check-docs:cli-commands -->
+
 | Comando                      | Qué hace                                            | Salida                         |
 | ---------------------------- | --------------------------------------------------- | ------------------------------ |
 | `run --recipe <n>`           | ejecuta el pipeline completo                        | archivo, estado y entrega      |
@@ -187,7 +189,11 @@ No hay API HTTP (ADR-008). La superficie del sistema son cuatro comandos.
 | `validate --recipe <n>`      | valida receta, credenciales y cadena de proveedores | diagnóstico, **sin red**       |
 | `doctor`                     | comprueba el entorno y resume la salud reciente     | estado agregado                |
 
+<!-- /check-docs:cli-commands -->
+
 **Códigos de salida**, y son parte del contrato porque el programador de tareas los lee (`RF-G06`):
+
+<!-- check-docs:exit-codes -->
 
 | Código | Significado                                        |
 | ------ | -------------------------------------------------- |
@@ -196,6 +202,8 @@ No hay API HTTP (ADR-008). La superficie del sistema son cuatro comandos.
 | `2`    | la recolección no produjo ningún elemento          |
 | `3`    | ningún proveedor de modelo pudo generar el informe |
 | `4`    | informe generado, **pero la entrega falló**        |
+
+<!-- /check-docs:exit-codes -->
 
 El código `2` existe porque en el sistema anterior ese caso devolvía `0` y el registro escribía
 "finalizada con éxito".

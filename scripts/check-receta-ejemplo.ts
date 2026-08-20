@@ -9,6 +9,7 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { MockLanguageModelV4 } from 'ai/test';
 import { buildNotifierRegistry, deliver } from '../src/deliver/registry.ts';
 import type {
@@ -23,7 +24,7 @@ import { projectRoot, resolveRecipeDir } from '../src/paths.ts';
 import { runPipeline } from '../src/rank/pipeline.ts';
 import { loadRecipe } from '../src/recipe/load.ts';
 import { deriveSections } from '../src/recipe/schema.ts';
-import type { FieldSpec, SectionSpec } from '../src/recipe/types.ts';
+import type { FieldSpec, RecipeConfig, SectionSpec } from '../src/recipe/types.ts';
 import { emailRenderer } from '../src/render/email.ts';
 import { jsonRenderer } from '../src/render/json.ts';
 import { markdownRenderer } from '../src/render/markdown.ts';
@@ -45,9 +46,9 @@ function readFixture(...segments: string[]): string {
  * la URL para elegir **qué fixture responder**, no para elegir un lector: eso sigue siendo trabajo
  * exclusivo de `sources/registry.ts` por `type` declarado (RF-B01).
  */
-const fakeFetch: FetchLike = async (url) => {
+export const fakeFetch: FetchLike = async (url) => {
   if (url.includes('hnrss.org')) {
-    return { ok: true, status: 200, text: async () => readFixture('feeds', 'rss-valido.xml') };
+    return { ok: true, status: 200, text: async () => readFixture('feeds', 'hn-llm.xml') };
   }
   if (url.includes('dev.to/api/articles')) {
     // Forma real de la API de dev.to: un array en la raíz, no envuelto (a diferencia del fixture
@@ -55,10 +56,25 @@ const fakeFetch: FetchLike = async (url) => {
     return { ok: true, status: 200, text: async () => readFixture('http', 'devto-articles.json') };
   }
   if (url.startsWith('https://api.github.com/search/repositories')) {
-    return { ok: true, status: 200, text: async () => readFixture('http', 'repo-search.json') };
+    return {
+      ok: true,
+      status: 200,
+      text: async () => readFixture('http', 'ejemplo-repo-search.json'),
+    };
   }
-  if (url.startsWith('https://api.github.com/repos/') && url.includes('/releases')) {
-    return { ok: true, status: 200, text: async () => readFixture('http', 'repo-releases.json') };
+  if (url.startsWith('https://api.github.com/repos/vercel/ai/releases')) {
+    return {
+      ok: true,
+      status: 200,
+      text: async () => readFixture('http', 'ejemplo-repo-releases-ai-sdk.json'),
+    };
+  }
+  if (url.startsWith('https://api.github.com/repos/biomejs/biome/releases')) {
+    return {
+      ok: true,
+      status: 200,
+      text: async () => readFixture('http', 'ejemplo-repo-releases-biome.json'),
+    };
   }
   throw new Error(`check-receta-ejemplo: URL no esperada, falta servirla desde un fixture: ${url}`);
 };
@@ -107,14 +123,21 @@ function mockModel(text: string): MockLanguageModelV4 {
 // Fija, no `new Date()`: las fechas de los fixtures son fijas, y el reloj de pared de quien
 // ejecuta CI no lo es. Con la hora real, este chequeo se degradaría solo con el paso del tiempo,
 // cuando los fixtures quedaran fuera de la ventana de la receta (ver `rank/window.ts`, RF-B07).
-const FIXED_NOW = new Date('2026-08-08T12:00:00.000Z');
+export const FIXED_NOW = new Date('2026-08-19T18:00:00.000Z');
 
-async function main(): Promise<void> {
+/**
+ * Recolección de `recipes/example` contra sus fixtures, aislada de `main()` para que T1
+ * (`tests/scripts/check-receta-ejemplo.test.ts`) reutilice exactamente el mismo corpus, sin
+ * duplicar la construcción del contexto de lectura.
+ */
+export async function collectExample(): Promise<{
+  readonly recipe: RecipeConfig;
+  readonly collected: readonly Item[];
+}> {
   const recipe = loadRecipe(resolveRecipeDir('example'));
 
-  const now = FIXED_NOW;
   const { items: collected, results } = await collect(recipe.sources, defaultRegistry, {
-    now,
+    now: FIXED_NOW,
     fetch: fakeFetch,
     timeoutMs: 5000,
     userAgent: 'chronorium-check-receta-ejemplo/1.0',
@@ -135,6 +158,13 @@ async function main(): Promise<void> {
   if (collected.length === 0) {
     throw new Error('recipes/example no recolectó ningún elemento desde los fixtures guardados');
   }
+
+  return { recipe, collected };
+}
+
+async function main(): Promise<void> {
+  const { recipe, collected } = await collectExample();
+  const now = FIXED_NOW;
 
   const ranked = runPipeline(collected, { now, recipe, isSeen: () => false });
   if (ranked.length === 0) {
@@ -187,7 +217,7 @@ async function main(): Promise<void> {
   const health = { windowDays: recipe.health.windowDays, runsOk: 0, runsFailed: 0 };
   const report = buildReport({
     recipe: { ...recipe, sections: sectionsConExtra },
-    date: '2026-08-08',
+    date: '2026-08-19',
     generatedAt: FIXED_NOW.toISOString(),
     modelOutput: modelOutputConExtra,
     provider: 'modelo-simulado',
@@ -195,7 +225,7 @@ async function main(): Promise<void> {
     linksDropped: 0,
     itemsCollected: collected.length,
     itemsAnalyzed: ranked.length,
-    sourcesOk: results.length,
+    sourcesOk: recipe.sources.length,
     sourcesFailed: 0,
     health,
   });
@@ -260,7 +290,11 @@ const neverFetch: DeliverFetchLike = async () => {
   throw new Error('check-receta-ejemplo: el notificador simulado no debe usar fetch');
 };
 
-main().catch((error: unknown) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+// Solo se ejecuta al lanzar el fichero directamente, nunca como efecto colateral de importar
+// `collectExample`/`fakeFetch`/`FIXED_NOW` desde `tests/scripts/check-receta-ejemplo.test.ts`.
+if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main().catch((error: unknown) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

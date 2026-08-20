@@ -1,0 +1,22 @@
+{
+  "total_count": 2,
+  "incomplete_results": false,
+  "items": [
+    {
+      "full_name": "ejemplo-org/agentkit-ts",
+      "html_url": "https://github.com/ejemplo-org/agentkit-ts",
+      "description": "A TypeScript toolkit for building LLM agent workflows, with typed tool calls.",
+      "stargazers_count": 356,
+      "created_at": "2026-08-14T10:00:00Z",
+      "pushed_at": "2026-08-18T18:00:00Z"
+    },
+    {
+      "full_name": "otra-org/llm-router",
+      "html_url": "https://github.com/otra-org/llm-router",
+      "description": "Lightweight request router for multi-provider LLM agent deployments.",
+      "stargazers_count": 91,
+      "created_at": "2026-08-12T08:00:00Z",
+      "pushed_at": "2026-08-17T12:00:00Z"
+    }
+  ]
+}

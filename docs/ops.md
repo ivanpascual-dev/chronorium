@@ -12,7 +12,8 @@ antes de esa confirmación.
 
 ## FASE 0 · Inicialización
 
-Ver `arranque.md` para el detalle de comandos.
+Fase cerrada. El porqué de cada decisión vive en los ADR (`04-decisiones-adr.md`, ADR-001/007/008);
+lo que pasó de verdad, en `bitacora.md`, entrada `2026-08-07`.
 
 - [x] Crear el repositorio público **vacío**. Nunca copiando el directorio del sistema anterior: sus
       tres credenciales en texto plano no pueden entrar en el historial (ADR-001)
@@ -127,12 +128,19 @@ para y replantea.
 
 ## FASE 6 · Publicación
 
-- [ ] README con la promesa, la ruta rápida y una captura de un informe real (anonimizado)
-- [ ] `README.es.md`
-- [ ] Guías de extensión: escribir una receta, añadir un lector, añadir un notificador
-- [ ] Verificación en CI de que la documentación no contradice al código
-- [ ] Cronometrar la ruta del desconocido en una cuenta limpia. Objetivo: cinco minutos
-- [ ] `/pre-lanzamiento` y etiqueta `v1.0.0`
+- [x] README con la promesa, la ruta rápida y una captura de un informe real (anonimizado)
+- [x] `README.es.md`
+- [x] Guías de extensión: escribir una receta, añadir un lector, añadir un notificador
+- [x] Verificación en CI de que la documentación no contradice al código
+- [x] Cronometrar la ruta del desconocido en una cuenta limpia. Objetivo: cinco minutos. Medido el
+      2026-08-20: 2:20
+- [x] Punto 10 del criterio de terminada (la prueba del lector de otro ámbito). Comprobación floja:
+      sin persona externa disponible, el dueño leyó `README.es.md`, `docs/07-escribir-una-receta.md`
+      y `docs/arranque.md` él mismo. Sin hallazgos. Ver `bitacora.md`, entrada 2026-08-20
+- [ ] `/pre-lanzamiento` y etiqueta `v1.0.0`. **Al etiquetar**, actualizar también el pin de
+      `docs/arranque.md` (`uses: ivanpascual-dev/chronorium/...@v0.5.4` → `@v1.0.0`): hasta ese
+      momento el fichero se deja apuntando a `v0.5.4`, el último tag que existe de verdad, aunque
+      `package.json` ya declare `"version": "1.0.0"`. Nunca un tag que todavía no existe
 
 ---
 

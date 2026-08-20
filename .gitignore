@@ -21,6 +21,11 @@ secrets.json
 tmp/
 *.local.json
 
+# Artefactos de ejecutar el CLI en local (el "Arranque rápido" del README escribe aquí). No es la
+# base de datos del repositorio de la instancia (ver la nota de abajo): en el motor público, esto
+# es solo la salida de quien lo está probando.
+data/
+
 # Sistema operativo y editores
 .DS_Store
 Thumbs.db
